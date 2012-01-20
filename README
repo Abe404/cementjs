@@ -1,5 +1,15 @@
-
 Bind your app together with cement.js
+                                       __                       
+                                      /\ \__       __           
+  ___     __    ___ ___      __    ___\ \ ,_\     /\_\    ____  
+ /'___\ /'__`\/' __` __`\  /'__`\/' _ `\ \ \/     \/\ \  /',__\ 
+/\ \__//\  __//\ \/\ \/\ \/\  __//\ \/\ \ \ \_  __ \ \ \/\__, `\
+\ \____\ \____\ \_\ \_\ \_\ \____\ \_\ \_\ \__\/\_\_\ \ \/\____/
+ \/____/\/____/\/_/\/_/\/_/\/____/\/_/\/_/\/__/\/_/\ \_\ \/___/ 
+                                                  \ \____/      
+                                                   \/___/       
+
+=============================================================================
 
 
    Copyright 2012 Abraham Smith 
@@ -15,3 +25,6 @@ Bind your app together with cement.js
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+=============================================================================
