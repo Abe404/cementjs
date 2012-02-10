@@ -1,5 +1,6 @@
 Bind your app together with cement.js
-                                         __                       
+
+<pre>                       
                                         /\ \__       __           
     ___     __    ___ ___      __    ___\ \ ,_\     /\_\    ____  
    /'___\ /'__`\/' __` __`\  /'__`\/' _ `\ \ \/     \/\ \  /',__\ 
@@ -8,7 +9,7 @@ Bind your app together with cement.js
    \/____/\/____/\/_/\/_/\/_/\/____/\/_/\/_/\/__/\/_/\ \_\ \/___/ 
                                                     \ \____/      
                                                      \/___/       
-  
+</pre> 
   
 [Getting Started](https://github.com/Abe404/cementjs/wiki "Getting Started").
 
