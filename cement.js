@@ -1,3 +1,4 @@
+/*jslint indent:4, browser:true*/
 //   Copyright 2012 Abraham Smith
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,11 +48,13 @@
         return moduleExports;
     };
     cement.require = function (moduleName) {
+        var module = null;
         if (modules[moduleName]) {
-            return modules[moduleName];
+            module = modules[moduleName];
         } else {
             throw new Error("module : " + moduleName + " is not defined.\n ");
         }
+        return module;
     };
     // testing putting something on develop branch 
     window.cmt = window.cement = cement;

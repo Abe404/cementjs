@@ -1,0 +1,9 @@
+cement.js uses nodeunit to run the tests
+https://github.com/caolan/nodeunit
+
+
+// There are too test suits
+// one for cement.js and another for build.js
+// buildtests.js tests that the build process works as it should
+// and cementtests.js tests that the module require,
+// define and events work as they should.
