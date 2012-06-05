@@ -1,0 +1,2 @@
+# Ignore JavaScript files as this folder is for compiled output
+*.js

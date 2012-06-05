@@ -1,0 +1,3 @@
+* Change the mock data to represent that in the docs
+* think about how a script should be linked to its location (namespacing)
+* write the test for resolving deep dependencies

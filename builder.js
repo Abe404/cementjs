@@ -1,29 +1,35 @@
 /*jslint node:true, regexp:true*/
-
 var fs = require('fs');
 // This is a builder module designed to be ran with nodejs
 // The build script will handle dependency resolution and minification.
 
-function getDepPath(filePath, callback) {
+// get the full path to the file with the dependency
+function getDepPaths(filePath, callback) {
   fs.readFile(filePath, function (err, data) {
     var requireRegex = /cement.require\(['"](.*)['"]\)/g,
-      depName = null,
-      depPath = null,
-      result = requireRegex.exec(data.toString());
-    if (result) {
-      depName = result[1];
+      dirSectionRegex = /(.*)\/.*$/, // the part of the path up to the last slash
+      depPaths = [],
+      depDirectory = dirSectionRegex.exec(filePath)[1],
+      match = true;
+    while (match !== null) {
+      match = requireRegex.exec(data.toString());
+      if (match) {
+        depPaths.push(depDirectory + '/' + match[1] + '.js');
+      }
     }
-    // get the full path to the file with the dependency
-    depPath = process.cwd() + '/' + depName + '.js';
-    callback(err, depPath);
+    callback(err, depPaths);
   });
 }
 
 function combineFiles(filePaths, callback, prevData) {
-  var combinedText = prevData || "";
-  // the last one should be added first 
-  if (filePaths.length) {
-    fs.readFile(filePaths.pop(), function (err, data) {
+  var combinedText = prevData || "",
+    nextFile = filePaths.pop();
+  // the last one should be added first
+  if (nextFile) {
+    fs.readFile(nextFile, function (err, data) {
+      if (err) {
+        throw new Error("Could not read dependency: " + nextFile);
+      }
       combinedText += data;
       combineFiles(filePaths, callback, combinedText);
     });
@@ -32,6 +38,7 @@ function combineFiles(filePaths, callback, prevData) {
   }
 }
 
+// pull in all the required modules and returnt them in one sting (including the file)1
 function resolveDependencies(fileName, callback) {
   // search for any files tha are required in this file
   var requireRegex = /cement.require\(['"](.*)['"]\)/g,
@@ -40,8 +47,11 @@ function resolveDependencies(fileName, callback) {
     fileStack = [];
   // the filestack will maintain the compilation order
   fileStack.push(targetPath);
-  getDepPath(targetPath, function (err, depPath) {
-    fileStack.push(depPath);
+  getDepPaths(targetPath, function (err, depPaths) {
+    var i = 0;
+    for(i = 0; i < depPaths.length; i += 1) {
+      fileStack.push(depPaths[i]);
+    }
     combineFiles(fileStack, callback);
   });
 }
