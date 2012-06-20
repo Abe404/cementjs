@@ -8,12 +8,13 @@ The JavaScript modules in the widgetCo folder are re-usable modules developed by
 
 ## Fig: 01.
 -----------
-JavaScript -> webAppA  -> core.js
-                       -> someWidget.js
+JavaScript -> webAppA ->  dashboard -> core.js
+                          dashboard -> someWidget.js
            -> widgetCo -> datePicker -> datePicker.js
                        -> timeUtills.js
 
 -----------
+
 
 During development the unminified scripts must be included in the html page.
 It is necessary to change the html embed code every time a script is added, renamed or removed.
@@ -23,7 +24,7 @@ Invoke cement with the embed command and a path to the scripts and cement will o
 the embed code with the scripts in the correct order.
 
 ----------
-$ cement embed ./JavaScript 
+$ cement embed root ./JavaScript  target ./JavaScript/webAppA/dashboard/core.js
 Outputs:
 <script type="text/javascript" src="/JavaScript/widgetCo/timeUtills.js"></script>
 <script type="text/javascript" src="/JavaScript/widgetCo/datePicker/datePicker.js"></script>
@@ -51,4 +52,13 @@ Modules that are not in the core and are not required by any modules in the core
 
 To compile the JavaScript used in webAppA into a single file called combined.js
 
-$ cement build ./JavaScript > combined.js
+$ cement build root ./JavaScript path ./JavaScript/webappA/dashboard/core.js > ./JavaScript/webappA/dashboard/combined.js
+
+
+<script type="text/javascript" src="/Content/JavaScript/webappA/dashboard/combined.js"></script>
+
+//
+Lint files
+Combine files
+Minify files
+

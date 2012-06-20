@@ -1,3 +1,13 @@
-* Change the mock data to represent that in the docs
-* think about how a script should be linked to its location (namespacing)
-* write the test for resolving deep dependencies
+//Write a test for this.
+* Make sure that duplicate dependencies are removed. ( no need to include the same module twice ).
+// Write a test for this.
+*  Make sure that the correct error is thrown for cyclic dependencies.
+// Linting:
+While building the depency tree..
+When each file is loaded check if it validates jslint.
+Also check if its name is valid (I think this is done already).
+* Make sure consistent indentation is used in all files (2 spaces)
+* give the tests more meaningful names
+* Add instructions on how to run the tests on the github wiki.
+* Update the docs on the github wiki describing how to use the cement builder.
+* Test the builder on a real life app.

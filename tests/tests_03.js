@@ -12,20 +12,18 @@ exports.setUp = function (callback) {
   callback();
 };
 
-exports["getDependencyTree: Check the correct tree is returned"] = function (test) {
+exports["getDependencyTree Check the correct tree is returned"] = function (test) {
   // in the tree each module is represented as an object.
   // The object has a dependencies property which is an array.
-  // Each item in array is another module.
-  
+  // Each item in array is another module.  
   // This test relies on some files on the file system
-  var expectedTree = [{ 
+  var expectedTree = [{
     name: "companyA.widgetOne",
-    dependencies: 
+    dependencies:
       [
-        { 
-          name: "companyA.widgetTwo", 
-          dependencies: 
-            [{ name: "companyB.specialWidget", dependencies: []}]
+        {
+          name: "companyA.widgetTwo",
+          dependencies: [{ name: "companyB.specialWidget", dependencies: []}]
         },
         { name: "modal", dependencies: [] }
       ]
@@ -35,44 +33,36 @@ exports["getDependencyTree: Check the correct tree is returned"] = function (tes
 
   test.expect(1);
   builder.getDependencyTree(scriptRoot, modulePath, function (dependencyTree) {
-    console.log("callback with tree = " + dependencyTree);
-  
-    test.ok(JSON.stringify(expectedTree) === JSON.stringify(dependencyTree), 
+    test.ok(JSON.stringify(expectedTree) === JSON.stringify(dependencyTree),
       "tree was not the same, tree = " + JSON.stringify(dependencyTree) + " expected = " + JSON.stringify(expectedTree));
-      
     test.done();
   });
 };
 
-exports["treeToModuleList: check the depency tree is correctly transformed into a list"] = function (test) {
+exports["treeToModuleList check the depency tree is correctly transformed into a list"] = function (test) {
   // The tree shows which modules are dependent on each other.
   // The file list will show the order in which the modules will need to be written to a file.
   // The modules at the top should be ones that dont rely on anything else (because nothing is before them)
-  
-  var dependencyTree = [{ 
+  var dependencyTree = [{
     name: "companyA.widgetOne",
-    dependencies: 
+    dependencies:
       [
-        { 
-          name: "companyA.widgetTwo", 
-          dependencies: 
+        {
+          name: "companyA.widgetTwo",
+          dependencies:
             [{ name: "companyB.specialWidget", dependencies: []}]
         },
         { name: "modal", dependencies: [] }
       ]
   }],
-    scriptRoot = "mockData/dependencyTree",
-    modulePath = "core.js",
     expectedModuleList = [
       "companyB.specialWidget",
       "companyA.widgetTwo",
       "modal",
       "companyA.widgetOne"
-    ];
+    ],
+    list = builder.treeToModuleList(dependencyTree);
   test.expect(1);
-
-  var list = builder.treeToModuleList(dependencyTree);
-  console.log("list = " + JSON.stringify(list));
   test.ok(JSON.stringify(expectedModuleList) === JSON.stringify(list), "list is correct");
   test.done();
 };

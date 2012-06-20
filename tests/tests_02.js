@@ -16,66 +16,79 @@ exports.tearDown = function (callback) {
 };
 
 exports["validates module: no error when name correct"] = function (test) {
-  var content = "cement.define('dashboard.mediaPanel', function (base, exports) {";
+  var content = "cement.define('dashboard.mediaPanel', function (base, exports) {",
+    error = null;
   content += "// this is the mediaPanel module";
   content += "});";
   test.expect(1);
-  builder.validateModule({
-	root: "scripts",
-	path: "scripts/dashboard/mediaPanel.js",
-	content: content
-  }, function (error) {
-	test.ok(!error, "should be no error, error found: " + error);
-	test.done();
-  });
+  try {
+    builder.validateModule({ root: "scripts", path: "scripts/dashboard/mediaPanel.js", content: content});
+  } catch (err) {
+    error = err;
+  } finally {
+    test.ok(!error, "there should be no error, error found: " + error);
+    test.done();
+  }
 };
 
 exports["validates module: error when name incorrect"] = function (test) {
-  var content = "cement.define('dashboard.mediaPanel', function (base, exports) {";
+  var content = "cement.define('dashboard.mediaPanel', function (base, exports) {",
+    error = null;
   content += "// this is the mediaPanel module";
   content += "});";
   test.expect(1);
-  builder.validateModule({
-	root: "scripts",
-	path: "scripts/dashboard/notMediaPanel.js",
-	content: content
-  }, function (error) {
-    test.ok(error, "no error found, There should be an error due to the invalid module name.");
+  try {
+    builder.validateModule({
+      root: "scripts",
+      path: "scripts/dashboard/notMediaPanel.js",
+      content: content
+    });
+  } catch (err) {
+    error = err;
+  } finally {
+    test.ok(error.message === "Module name(dashboard.mediaPanel) does not match its location(dashboard/notMediaPanel.js)", "no error found, There should be an error due to the invalid module name.");
     test.done();
-  });
+  }
 };
 
 // error when there is no defined module found.
 exports["validates module: error when no module found in file"] = function (test) {
-  var content = "var foo = 42;";
+  var content = "var foo = 42;",
+    desiredErrorMessage = "Could not find a module defined in scripts/dashboard/mediaPanel.js";
   test.expect(1);
-  builder.validateModule({
-	root: "scripts",
-	path: "scripts/dashboard/mediaPanel.js",
-	content: content
-  }, function (error) {
-    test.ok(error, "There should be an error when no module is found.");
+  try {
+    builder.validateModule({
+      root: "scripts",
+      path: "scripts/dashboard/mediaPanel.js",
+      content: content
+    });
+  } catch (error) {
+    // "There should be an error when no module is found.
+    test.ok(error.message === desiredErrorMessage, "should show multiple modules error");
     test.done();
-  });
+  }
 };
 
 // error when there are multiple modules defined (only one must be defined in a file)
 exports["validates module: error when multiple modules defined in one file"] = function (test) {
-  var content = "cement.define('dashboard.mediaPanel', function (base, exports) {";
+  var desiredErrorMessage = "Multiple module definitions found in scripts/dashboard/mediaPanel.js",
+    content = "cement.define('dashboard.mediaPanel', function (base, exports) {";
   content += "// this is the module";
   content += "});";
   content += "cement.define('dashboard.mediaPanelTwo', function (base, exports) {";
   content += "// this is the module";
   content += "});";
   test.expect(1);
-  builder.validateModule({
-    root: "scripts",
-    path: "scripts/dashboard/mediaPanel.js",
-    content: content
-  }, function (error) {
-    test.ok(error === "multiple module definitions found in file.", "should show multiple modules error");
+  try {
+    builder.validateModule({
+      root: "scripts",
+      path: "scripts/dashboard/mediaPanel.js",
+      content: content
+    });
+  } catch (error) {
+    test.ok(error.message === desiredErrorMessage, "should show multiple modules error");
     test.done();
-  });
+  }
 };
 
 exports["getRequiredModules: returns the required modules for a module"] = function (test) {
@@ -95,21 +108,19 @@ exports["getRequiredModules: returns the required modules for a module"] = funct
   test.done();
 };
 
-
-
 function writeTestFiles(callback) {
-  fs.writeFile("fileOne", "fileOneContents", function (err) {
-    fs.writeFile("fileTwo", "fileTwoContents", function (err) {
-      fs.writeFile("fileThree", "fileThreeContents", function (err) {
+  fs.writeFile("fileOne", "fileOneContents", function () {
+    fs.writeFile("fileTwo", "fileTwoContents", function () {
+      fs.writeFile("fileThree", "fileThreeContents", function () {
         callback();
       });
     });
   });
 }
 function removeTestFiles(callback) {
-  fs.unlink('fileOne', function (err) {
-    fs.unlink('fileTwo', function (err) {
-      fs.unlink('fileThree', function (err) {
+  fs.unlink('fileOne', function () {
+    fs.unlink('fileTwo', function () {
+      fs.unlink('fileThree', function () {
         callback();
       });
     });
@@ -122,7 +133,6 @@ exports["combineFiles: files exist in correct order in the output"] = function (
   writeTestFiles(function () {
     // once written to disk tell the builder to combine the files.
     builder.combineFiles(fileNames, function (combined) {
-      console.log("combined = " + combined);  
       // check that the builder callback has all three files in it(in order)
       test.ok(combined.indexOf("fileOneContents") !== -1, "fileOne is in the compiled output");
       test.ok(combined.indexOf("fileTwoContents") > combined.indexOf("fileOneContents"), "file two is after file one");

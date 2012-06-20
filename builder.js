@@ -24,6 +24,9 @@ exports.combineFiles = function (filePaths, callback, prevData) {
       if (err) {
         throw new Error("Could not read dependency: " + nextFile);
       }
+      if (combinedText.length) {
+        combinedText += '\n' // Add a line break between files.
+      }
       combinedText += data;
       exports.combineFiles(filePaths, callback, combinedText);
     });
@@ -45,31 +48,26 @@ exports.getRequiredModules = function (scriptContent) {
   }
   return requiredModules;
 };
-
 function moduleNameToFilePath(moduleName) {
   // companyA.widgetOne shoud be converted to companyA/widgetOne.js
   return moduleName.replace('.', '/') + ".js";
 }
-
 exports.getDependencyTree = function getTree(scriptsRootDir, filePath, callback) {
   var tree = [],
     moduleContents = fs.readFileSync(scriptsRootDir + '/' + filePath).toString(),
     dependencyList = null,
     nextDependency = null;
-    
   // Check that the module is valid before doing anything else (fail early defensive programming)
   // Only check if it isnt the core as the core is not a module
-  if(filePath.slice(filePath.length - "core.js".length, filePath.length) !== "core.js"){
+  if (filePath.slice(filePath.length - "core.js".length, filePath.length) !== "core.js") {
     exports.validateModule({
       content: moduleContents,
       path: scriptsRootDir + '/' + filePath,
       root: scriptsRootDir
     });
   }
-
   dependencyList = exports.getRequiredModules(moduleContents);
   nextDependency = dependencyList.shift();
-
   // add each one of the dependencies as a module
   while (nextDependency) {
     tree.push({
@@ -96,7 +94,7 @@ function moduleNameMatchesPath(moduleName, path) {
 }
 
 // Check that the module has a name which matches its location
-exports.validateModule = function (script, callback) {
+exports.validateModule = function (script) {
   var defineRegex = /cement.define\(['"](.*?)['"]/g,
     match = null,
     moduleName = null,
@@ -116,16 +114,16 @@ exports.validateModule = function (script, callback) {
     match = defineRegex.exec(script.content);
     // if there is another match then that means there is multiple definitions in the file
     if (match) {
-      error = "multiple module definitions found in file.";
+      error = "Multiple module definitions found in " + script.path;
     }
   } else {
-    error = "could not find a module defined in the file, file = " + script.path;
+    error = "Could not find a module defined in " + script.path;
   }
   if (!error) {
 	  // remove the root from the beginning of the script.path
     script.path = script.path.replace(script.root + '/', "");
     if (!moduleNameMatchesPath(moduleName, script.path)) {
-      error = "module name does not match its location";
+      error = "Module name(" + moduleName + ") does not match its location(" + script.path + ")";
     }
   }
   if (error) {
@@ -133,7 +131,51 @@ exports.validateModule = function (script, callback) {
   }
 };
 
-exports.build = function (options, callback) {
+// Find all the core files in the scriptsDirectory
+exports.getCoreFiles = function (scriptsDirectory) {
+  var corePaths = [],
+    i = 0,
+    stats = null,
+    files = fs.readdirSync(scriptsDirectory), // Read the list of files in the scriptsDirectory.
+    fullPath = null;
+  for (i = 0; i < files.length; i += 1) {
+    fullPath = scriptsDirectory + "/" + files[i];
+    // if its ending matches with core.js then add it to the corePaths array.
+    if (fullPath.slice(fullPath.length - "core.js".length, fullPath.length) === "core.js") {
+      corePaths.push(fullPath);
+    }
+    // if its a directory then get the corePaths from that directory and add them to the corePaths
+    stats = fs.lstatSync(fullPath);
+    if (stats.isDirectory()) {
+      corePaths = corePaths.concat(exports.getCoreFiles(fullPath));
+    }
+  }
+  return corePaths;
+};
+
+exports.buildSiteScripts = function (options, callback) {
+  var coreFilePaths = null;
+  if (!options.root) {
+    throw new Error("Scripts root must be specified");
+  }
+  coreFilePaths = exports.getCoreFiles(options.root);
+  function compileNext(path) {
+    if (path) {
+      exports.buildPageScripts({
+        root: options.root,
+        path: path.replace(options.root,'')
+      }, function (compiledOutput) {
+        fs.writeFileSync(path.replace('core.js', 'combined.js'), compiledOutput);
+        compileNext(coreFilePaths.shift());
+      });
+    } else {
+      callback();
+    }
+  }
+  compileNext(coreFilePaths.shift());
+};
+
+exports.buildPageScripts = function (options, callback) {
   if (!options.root) {
     throw new Error("scripts root must be specified");
   }
