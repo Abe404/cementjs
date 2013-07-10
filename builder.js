@@ -1,4 +1,5 @@
-/*jslint node:true, regexp:true, indent:2*/
+/*jslint node:true, regexp:true, indent:2, stupid: true*/
+"use strict";
 var fs = require('fs');
 // This is a builder module designed to be ran with nodejs
 // The build script will handle dependency resolution and minification.
@@ -25,7 +26,7 @@ exports.combineFiles = function (filePaths, callback, prevData) {
         throw new Error("Could not read dependency: " + nextFile);
       }
       if (combinedText.length) {
-        combinedText += '\n' // Add a line break between files.
+        combinedText += '\n'; // Add a line break between files.
       }
       combinedText += data;
       exports.combineFiles(filePaths, callback, combinedText);
@@ -94,41 +95,42 @@ function moduleNameMatchesPath(moduleName, path) {
 }
 
 // Check that the module has a name which matches its location
-exports.validateModule = function (script) {
+exports.validateModule = function (options, callback) {
   var defineRegex = /cement.define\(['"](.*?)['"]/g,
     match = null,
-    moduleName = null,
-    error = null;
-  if (!script.content) {
-    error = "script.content must be defined";
+    moduleName = null;
+  if (!options.content) {
+    callback("script.content must be defined");
+    return;
   }
-  if (!script.path) {
-	error = "script.path must be defined";
+  if (!options.path) {
+    callback("script.path must be defined");
+    return;
   }
-  if (!script.root) {
-    error = "script.root the root of the scripts must be defined";
+  if (!options.root) {
+    callback("script.root the root of the scripts must be defined");
+    return;
   }
-  match = defineRegex.exec(script.content);
+  match = defineRegex.exec(options.content);
   if (match) {
     moduleName = match[1];
-    match = defineRegex.exec(script.content);
+    match = defineRegex.exec(options.content);
     // if there is another match then that means there is multiple definitions in the file
     if (match) {
-      error = "Multiple module definitions found in " + script.path;
+      callback("Multiple module definitions found in " + options.path);
+      return;
     }
   } else {
-    error = "Could not find a module defined in " + script.path;
+    callback("Could not find a module defined in " + options.path);
+    return;
   }
-  if (!error) {
-	  // remove the root from the beginning of the script.path
-    script.path = script.path.replace(script.root + '/', "");
-    if (!moduleNameMatchesPath(moduleName, script.path)) {
-      error = "Module name(" + moduleName + ") does not match its location(" + script.path + ")";
-    }
+  // remove the root from the beginning of the script.path
+  options.path = options.path.replace(options.root + '/', "");
+  if (!moduleNameMatchesPath(moduleName, options.path)) {
+    callback("Module name(" + moduleName + ") does not match its location(" + options.path + ")");
+    return;
   }
-  if (error) {
-    throw new Error(error);
-  }
+  callback(null); // no error means valid module
 };
 
 // Find all the core files in the scriptsDirectory
