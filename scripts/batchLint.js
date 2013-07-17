@@ -3,7 +3,7 @@
 "use strict";
 var fs = require('fs'),
   spawn = require('child_process').spawn,
-  ignores = ['node_modules', 'lib'],
+  ignores = ['node_modules', 'lib', 'previousLintTimes.json'],
   foldersToLint = [
     '../'
   ],
@@ -71,7 +71,7 @@ function lintFolder(folderPath) {
       // if its a javascript file (includes .json)
       } else if (files[i].indexOf('.js') !== -1) {
         if (!isIgnored(folderPath + '/' + files[i])) {
-
+          //console.log("file = " + files[i] + " modified time = " + fileStats.mtime.getTime());
           // if there is a previous lint time for this file
           if (previousLintTimes[folderPath + '/' + files[i]]) {
             // if the files last modified time is (bigger than) its previous lint time
@@ -79,14 +79,14 @@ function lintFolder(folderPath) {
               // then lint the file
               filesToLint.push(folderPath + '/' + files[i]);
               // reset its previous lint time
-              newLintTimes[folderPath + '/' + files[i]] = fileStats.mtime.getTime();
+              newLintTimes[folderPath + '/' + files[i]] = (new Date()).getTime();
             }
           } else {
             // if no entry then 
             // then lint the file
             filesToLint.push(folderPath + '/' + files[i]);
             // reset its previous lint time
-            newLintTimes[folderPath + '/' + files[i]] = fileStats.mtime.getTime();
+            newLintTimes[folderPath + '/' + files[i]] = (new Date()).getTime();
           }
         }
       }

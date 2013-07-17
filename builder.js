@@ -65,6 +65,11 @@ exports.getDependencyTree = function getTree(scriptsRootDir, filePath, callback)
       content: moduleContents,
       path: scriptsRootDir + '/' + filePath,
       root: scriptsRootDir
+    }, function (err) {
+      if (err) {
+        callback(err);
+        return;
+      }
     });
   }
   dependencyList = exports.getRequiredModules(moduleContents);
@@ -165,7 +170,7 @@ exports.buildSiteScripts = function (options, callback) {
     if (path) {
       exports.buildPageScripts({
         root: options.root,
-        path: path.replace(options.root,'')
+        path: path.replace(options.root, '')
       }, function (compiledOutput) {
         fs.writeFileSync(path.replace('core.js', 'combined.js'), compiledOutput);
         compileNext(coreFilePaths.shift());

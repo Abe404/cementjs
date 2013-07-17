@@ -1,4 +1,7 @@
+/*jslint indent:2, unparam:true*/
+/*globals cement*/
 cement.define("companyA.widgetOne", function (base, exports) {
-  var widgetTwo = cement.require("companyA.widgetTwo"),
-    modal = cement.require("modal");
+  "use strict";
+  cement.require("companyA.widgetTwo");
+  cement.require("modal");
 });

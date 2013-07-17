@@ -1,4 +1,4 @@
-/*jslint indent:4, browser:true*/
+/*jslint indent:2, browser:true*/
 //   Copyright 2012 Abraham Smith
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,50 +13,50 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-
 (function () {
-    // Modularize your applications with cement.js
-    var cement = {},
-        modules = {},
-        moduleInitialisers = {}; // functions that create modules
-    // all modules can dispatch events with base.dispatch("eventName") and listened to with module.on("eventname")  
-    function addDispatchAndOnMethods(moduleBase, moduleExports, moduleEventHandlers) {
-        moduleBase.dispatch = function (eventName, data1, data2, data3, data4) {
-            if (moduleEventHandlers[eventName]) {
-                moduleEventHandlers[eventName](data1, data2, data3, data4);
-            }
-        };
-        moduleExports.on = function (eventName, eventHandler) {
-            moduleEventHandlers[eventName] = eventHandler;
-        };
+  // Modularize your applications with cement.js
+  "use strict";
+  var cement = {},
+    modules = {},
+    moduleInitialisers = {}; // functions that create modules
+  // all modules can dispatch events with base.dispatch("eventName") and listened to with module.on("eventname")  
+  function addDispatchAndOnMethods(moduleBase, moduleExports, moduleEventHandlers) {
+    moduleBase.dispatch = function (eventName, data1, data2, data3, data4) {
+      if (moduleEventHandlers[eventName]) {
+        moduleEventHandlers[eventName](data1, data2, data3, data4);
+      }
+    };
+    moduleExports.on = function (eventName, eventHandler) {
+      moduleEventHandlers[eventName] = eventHandler;
+    };
+  }
+  cement.define = function (moduleName, moduleInitialiser) {
+    var moduleBase = {},
+      moduleExports = {},
+      moduleEventHandlers = {};
+    moduleInitialisers[moduleName] = moduleInitialiser;
+    addDispatchAndOnMethods(moduleBase, moduleExports, moduleEventHandlers);
+    moduleInitialiser(moduleBase, moduleExports);
+    modules[moduleName] = moduleExports;
+  };
+  cement.createInstance = function (moduleName) {
+    var moduleBase = {},
+      moduleExports = {},
+      moduleEventHandlers = {};
+    addDispatchAndOnMethods(moduleBase, moduleExports, moduleEventHandlers);
+    moduleInitialisers[moduleName](moduleBase, moduleExports);
+    return moduleExports;
+  };
+  cement.require = function (moduleName) {
+    var module = null;
+    if (modules[moduleName]) {
+      module = modules[moduleName];
+    } else {
+      throw new Error("module : " + moduleName + " is not defined.\n ");
     }
-    cement.define = function (moduleName, moduleInitialiser) {
-        var moduleBase = {},
-            moduleExports = {},
-            moduleEventHandlers = {};
-        moduleInitialisers[moduleName] = moduleInitialiser;
-        addDispatchAndOnMethods(moduleBase, moduleExports, moduleEventHandlers);
-        moduleInitialiser(moduleBase, moduleExports);
-        modules[moduleName] = moduleExports;
-    };
-    cement.createInstance = function (moduleName) {
-        var moduleBase = {},
-            moduleExports = {},
-            moduleEventHandlers = {};
-        addDispatchAndOnMethods(moduleBase, moduleExports, moduleEventHandlers);
-        moduleInitialisers[moduleName](moduleBase, moduleExports);
-        return moduleExports;
-    };
-    cement.require = function (moduleName) {
-        var module = null;
-        if (modules[moduleName]) {
-            module = modules[moduleName];
-        } else {
-            throw new Error("module : " + moduleName + " is not defined.\n ");
-        }
-        return module;
-    };
-    // testing putting something on develop branch 
-    window.cmt = window.cement = cement;
-    // test adding line on build_script feature branch
+    return module;
+  };
+  // testing putting something on develop branch 
+  window.cmt = window.cement = cement;
+  // test adding line on build_script feature branch
 }());

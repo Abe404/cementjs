@@ -1,18 +1,19 @@
+/*jslint indent: 2,unparam: true, sloppy: true*/
+/*globals cement*/
 cement.define("companyB.specialWidget", function (base, exports) {
   // special widget
 });
 cement.define("companyA.widgetTwo", function (base, exports) {
-  var specialWidget = cement.require("companyB.specialWidget");
+  cement.require("companyB.specialWidget");
 });
 cement.define("modal", function (base, exports) {
   // this is the modal module
 });
 cement.define("companyA.widgetOne", function (base, exports) {
-  var widgetTwo = cement.require("companyA.widgetTwo"),
-    modal = cement.require("modal");
+  cement.require("companyA.widgetTwo");
+  cement.require("modal");
 });
-$(function() {
-  var widget = cement.require("companyA.widgetOne");
-  
+(function () {
+  cement.require("companyA.widgetOne");
   // This is the core
-});
+}());
