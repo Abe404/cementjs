@@ -144,7 +144,7 @@ describe("builder", function () {
   });
 
   describe("getDependencyTree", function () {
-    it.only("returns the correct depency tree",  function (done) {
+    it("returns the correct depency tree",  function (done) {
       // in the tree each module is represented as an object.
       // The object has a dependencies property which is an array.
       // Each item in array is another module.
@@ -174,7 +174,7 @@ describe("builder", function () {
     });
   });
   describe("treeToModuleList", function () {
-    it("transforms the depency tree into a lint", function (test) {
+    it("transforms the depency tree into a list", function (done) {
       // The tree shows which modules are dependent on each other.
       // The file list will show the order in which the modules will need to be written to a file.
       // The modules at the top should be ones that dont rely on anything else (because nothing is before them)
@@ -197,9 +197,8 @@ describe("builder", function () {
           "companyA.widgetOne"
         ],
         list = builder.treeToModuleList(dependencyTree);
-      test.expect(1);
-      test.ok(JSON.stringify(expectedModuleList) === JSON.stringify(list), "list is correct");
-      test.done();
+      assert.equal(JSON.stringify(expectedModuleList), JSON.stringify(list), "list is correct");
+      done();
     });
   });
 
@@ -207,7 +206,7 @@ describe("builder", function () {
   describe("buildPageScripts", function () {
     it("builds the scripts from a core.js file without throwing an error", function (done) {
       var options = {
-        root: "mockData/dependencyTree",
+        root: __dirname + "/mockData/dependencyTree",
         path: "core.js"
       };
       builder.buildPageScripts(options, function (compiledOutput) {
@@ -221,12 +220,18 @@ describe("builder", function () {
 // Core files represtent the entry point or the "main" file for the scripts for a specific page.
   describe("getCoreFiles", function () {
     it("findes the core.js files in a multipage site", function (done) {
-      var pathToScripts = "mockData/multiPage",
-        expectedPaths = ['mockData/multiPage/page1/core.js', 'mockData/multiPage/page2/core.js'],
+      var pathToScripts = __dirname + "/mockData/multiPage",
+        expectedPaths = [
+          __dirname + '/mockData/multiPage/page1/core.js',
+          __dirname + '/mockData/multiPage/page2/core.js'
+        ],
         corePaths = null;
 
       corePaths = builder.getCoreFiles(pathToScripts);
-      assert(JSON.stringify(corePaths) === JSON.stringify(expectedPaths), "Core paths should be same as the ones found.");
+      console.log(JSON.stringify(corePaths));
+
+      console.log(JSON.stringify(expectedPaths));
+      assert.equal(JSON.stringify(corePaths), JSON.stringify(expectedPaths), "Core paths should be same as the ones found.");
       done();
     });
   });
