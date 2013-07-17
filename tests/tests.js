@@ -214,7 +214,6 @@ describe("builder", function () {
         done();
       });
     });
-    it("produces compiled output that contains all the modules in the correct order.");
   });
 
 // Core files represtent the entry point or the "main" file for the scripts for a specific page.
