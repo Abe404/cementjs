@@ -3,36 +3,38 @@
 "use strict";
 var fs = require('fs'),
   spawn = require('child_process').spawn,
-  ignores = ['node_modules', 'lib', 'previousLintTimes.json'],
+  ignores = ['node_modules'],
   foldersToLint = [
     '../'
   ],
   previousLintTimes = {},
   newLintTimes = {};
 
-function lintFile(filePath) {
+function lintFile(filePath, callback) {
   console.log("Linting " + filePath);
   (function (path) {
     // Call jslint on the specific file
-    var jslint = spawn('jslint', [__dirname + '/' + filePath]),
+    var jslint = spawn('jslint', [__dirname + '/' + path]),
       errorMessage = "";
     jslint.stdout.on('data', function (data) {
-      //console.log('lint for ' + filePath + ': stdout: ' + data);
+      //console.log('lint for ' + path + ': stdout: ' + data);
       //console.log(String(data));
       errorMessage += String(data);
     });
     jslint.stderr.on('data', function (data) {
-      console.log('lint for ' + filePath + ':stderr: ' + data);
+      console.log('lint for ' + path + ':stderr: ' + data);
     });
     jslint.on('close', function (code) {
       if (code !== 0) {
-        console.log('lint for ' + filePath + ':process exited with code ' + code);
+        console.log('lint for ' + path + ':process exited with code ' + code);
         console.log("Error", errorMessage);
-        newLintTimes[filePath] = 1; // if there is an error then set lint time to long ago.
+        newLintTimes[path] = 1; // if there is an error then set lint time to long ago.
         process.exit(code);
+      } else {
+        callback(null, path);
       }
     });
-  }(filePath));
+  }(filePath, callback));
 }
 
 function isIgnored(path) {
@@ -48,10 +50,24 @@ function isIgnored(path) {
 }
 
 function lintFiles(filePaths) {
-  var i = 0;
-  for (i = 0; i < filePaths.length; i += 1) {
-    lintFile(filePaths[i]);
+  var filesToLint = filePaths;
+  function lintNext() {
+    var next = filesToLint.pop(),
+      lintTime = null;
+    if (!next) {
+      return;
+    }
+    lintFile(next, function (err, path) {
+      if (err) {
+        throw err;
+      }
+      // reset its previous lint time
+      lintTime = (new Date()).getTime();
+      newLintTimes[path] = lintTime;
+      lintNext();
+    });
   }
+  lintNext();
 }
 
 function lintFolder(folderPath) {
@@ -71,15 +87,16 @@ function lintFolder(folderPath) {
       // if its a javascript file (includes .json)
       } else if (files[i].indexOf('.js') !== -1) {
         if (!isIgnored(folderPath + '/' + files[i])) {
-          //console.log("file = " + files[i] + " modified time = " + fileStats.mtime.getTime());
           // if there is a previous lint time for this file
           if (previousLintTimes[folderPath + '/' + files[i]]) {
             // if the files last modified time is (bigger than) its previous lint time
+            //console.log(files[i] + ', mtime = ', fileStats.mtime.getTime());
             if (fileStats.mtime.getTime() > previousLintTimes[folderPath + '/' + files[i]]) {
               // then lint the file
               filesToLint.push(folderPath + '/' + files[i]);
-              // reset its previous lint time
-              newLintTimes[folderPath + '/' + files[i]] = (new Date()).getTime();
+            }
+            if (!fileStats.mtime.getTime() || fileStats.mtime.getTime() < 100) {
+              throw new Error("something wrong with file mtime, mtime = " + fileStats.mtime.getTime());
             }
           } else {
             // if no entry then 
