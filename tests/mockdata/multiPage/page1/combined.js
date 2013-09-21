@@ -6,6 +6,7 @@ cement.define("companyB.specialWidget", function (base, exports) {
 });
 
 cement.define("companyA.widgetTwo", function (base, exports) {
+  "use strict";
   var specialWidget = cement.require("companyB.specialWidget");
 });
 /*jslint indent: 2, unparam: true*/
@@ -16,8 +17,10 @@ cement.define("modal", function (base, exports) {
 });
 
 cement.define("companyA.widgetOne", function (base, exports) {
+  "use strict";
   var widgetTwo = cement.require("companyA.widgetTwo"),
     modal = cement.require("modal");
+  modal.doSomething();
 });
 /*jslint indent: 2*/
 /*globals $, cement*/

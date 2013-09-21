@@ -102,8 +102,6 @@ function lintFolder(folderPath) {
             // if no entry then 
             // then lint the file
             filesToLint.push(folderPath + '/' + files[i]);
-            // reset its previous lint time
-            newLintTimes[folderPath + '/' + files[i]] = (new Date()).getTime();
           }
         }
       }
