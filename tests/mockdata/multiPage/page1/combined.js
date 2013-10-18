@@ -5,10 +5,14 @@ cement.define("companyB.specialWidget", function (base, exports) {
   // special widget
 });
 
+/*jslint indent: 2*/
+/*globals cement*/
 cement.define("companyA.widgetTwo", function (base, exports) {
   "use strict";
   var specialWidget = cement.require("companyB.specialWidget");
+  specialWidget.doStuff();
 });
+
 /*jslint indent: 2, unparam: true*/
 /*global cement*/
 cement.define("modal", function (base, exports) {
@@ -16,12 +20,14 @@ cement.define("modal", function (base, exports) {
   // this is the modal module
 });
 
+/*jslint indent:2*/
+/*globals cement*/
 cement.define("companyA.widgetOne", function (base, exports) {
   "use strict";
   var widgetTwo = cement.require("companyA.widgetTwo"),
     modal = cement.require("modal");
-  modal.doSomething();
 });
+
 /*jslint indent: 2*/
 /*globals $, cement*/
 $(function () {
