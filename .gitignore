@@ -39,3 +39,5 @@ Thumbs.db
 # lint script generates this
 previousLintTimes.json
 
+
+output/

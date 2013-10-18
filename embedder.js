@@ -23,16 +23,20 @@ exports.createMultipleScriptTags = function (filePaths, callback) {
 
 //replace the <!-- InsertCementJS --> with the script tags referencing the modules
 exports.addCementScripts = function (options, callback) {
-  var cementComment = '<!-- InsertCementJS -->';
+  var cementComment = /<!-- Start:InsertCementModules -->(.|\n)*<!-- End:InsertCementModules -->/g;
   assert(options.html, 'html input must be specified');
   assert(options.scriptsFilePaths, 'scriptsFilePaths must be specified');
 
+  if (!options.html.match(cementComment)) {
+    callback('could not find cement block in the input file: ' + options.html);
+  }
   function gotScriptsHtml(err, scriptsHtml) {
     var output = '';
     if (err) {
       callback(err);
       return;
     }
+    scriptsHtml = '<!-- Start:InsertCementModules -->' + scriptsHtml + '<!-- End:InsertCementModules -->';
     output = options.html.replace(cementComment, scriptsHtml);
     callback(null, output);
   }

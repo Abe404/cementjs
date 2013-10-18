@@ -1,6 +1,8 @@
 /*jslint node:true, regexp:true, indent:2, stupid: true*/
 "use strict";
-var fs = require('fs');
+var fs = require('fs'),
+  assert = require('assert'),
+  embedder = require('./embedder.js');
 // This is a builder module designed to be ran with nodejs
 // The build script will handle dependency resolution and minification.
 
@@ -201,4 +203,46 @@ exports.buildPageScripts = function (options, callback) {
       callback(data);
     });
   });
+};
+
+
+function runOnSiteForProduction(options, callback) {
+  exports.buildPageScripts({
+    root: options.scriptsRoot,
+    path: 'core.js'
+  }, function (combinedScripts) {
+    var html = '',
+      scriptPath = options.outputDir + '/combined.js';
+    // write the final output file
+    fs.writeFileSync(scriptPath, combinedScripts);
+    // read the html file in
+    html = fs.readFileSync(options.pathToHtmlFile);
+    // replace the cement comment with the combined script
+    embedder.addCementScripts({
+      scriptsFilePaths: ['combined.js'],
+      html: String(html)
+    }, function (err, htmlOutput) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      // write the file out again 
+      fs.writeFileSync(options.outputDir + '/index.html', htmlOutput);
+      callback(null);
+    });
+  });
+}
+exports.runOnSite = function (options, callback) {
+  assert(options.scriptsRoot, 'folder containing the cement scripts for the page required');
+  assert(options.pathToHtmlFile, 'path to html file required');
+  // production means scripts are combined and minified
+  assert(
+    options.mode === 'development' || options.mode === 'production',
+    'mode should be specified as either development or production'
+  );
+  if (options.mode === 'production') {
+    runOnSiteForProduction(options, callback);
+  } else {
+    throw new Error('unhandled mode');
+  }
 };

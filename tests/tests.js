@@ -227,9 +227,6 @@ describe("builder", function () {
         corePaths = null;
 
       corePaths = builder.getCoreFiles(pathToScripts);
-      console.log(JSON.stringify(corePaths));
-
-      console.log(JSON.stringify(expectedPaths));
       assert.equal(JSON.stringify(corePaths), JSON.stringify(expectedPaths), "Core paths should be same as the ones found.");
       done();
     });
@@ -239,9 +236,22 @@ describe("builder", function () {
       var options = {
         root: __dirname + "/mockData/multiPage"
       };
-      console.log(options);
       builder.buildSiteScripts(options, function (err) {
         assert(!err, "assert site scripts built with no errors.");
+        done();
+      });
+    });
+  });
+
+  describe.only('runOnSite', function () {
+    it('embedsTheScriptsProperly in the single page (production)', function (done) {
+      builder.runOnSite({
+        scriptsRoot:  "mockData/embedTestFiles/js",
+        pathToHtmlFile: "mockData/embedTestFiles/index.html",
+        outputDir: "output",
+        mode: 'production'
+      }, function (err) {
+        assert(!err, err);
         done();
       });
     });

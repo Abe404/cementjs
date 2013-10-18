@@ -36,7 +36,6 @@ describe("embedder", function () {
         done();
       });
     });
-
   });
 
   describe("addCementScripts", function (done) {
@@ -50,7 +49,9 @@ describe("embedder", function () {
         ];
       input += '<html>';
       input += '  <head>';
-      input += '    <!-- InsertCementJS -->';
+      input += '<!-- Start:InsertCementJS -->';
+      input += 'does not matter what was here before';
+      input += '<!-- End:InsertCementJS -->';
       input += '  </head>';
       input += '  <body>';
       input += '    <div id="container"></div>';
@@ -59,8 +60,10 @@ describe("embedder", function () {
 
       expectedOutput += '<html>';
       expectedOutput += '  <head>';
-      expectedOutput += '    <script type="text/javascript" src="js/cement/moduleOne.js"></script>';
+      expectedOutput += '<!-- Start:InsertCementJS -->';
+      expectedOutput += '<script type="text/javascript" src="js/cement/moduleOne.js"></script>';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleTwo.js"></script>';
+      expectedOutput += '<!-- End:InsertCementJS -->';
       expectedOutput += '  </head>';
       expectedOutput += '  <body>';
       expectedOutput += '    <div id="container"></div>';
