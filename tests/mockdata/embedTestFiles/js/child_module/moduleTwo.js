@@ -1,8 +1,8 @@
 /*jslint indent: 2*/
 /*globals cement, alert*/
-cement.define("smoe.moduleOne", function (base, exports) {
+cement.define("moduleTwo", function (base, exports) {
   "use strict";
   exports.alert = function () {
-    alert('inside module one');
+    alert('inside module two');
   };
 });

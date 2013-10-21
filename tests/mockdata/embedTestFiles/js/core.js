@@ -2,7 +2,9 @@
 /*globals cement, alert*/
 (function () {
   "use strict";
-  var moduleOne = cement.require('moduleOne');
+  var moduleOne = cement.require('moduleOne'),
+    moduleTwo = cement.require('moduleTwo');
   alert('inside core');
   moduleOne.alert();
+  moduleTwo.alert();
 }());
