@@ -243,15 +243,39 @@ describe("builder", function () {
     });
   });
 
-  describe.only('runOnSite', function () {
-    it('embedsTheScriptsProperly in the single page (production)', function (done) {
+  describe('runOnSite', function () {
+    it.only('works on the single page (production mode) without error', function (done) {
       builder.runOnSite({
-        scriptsRoot:  "mockData/embedTestFiles/js",
-        pathToHtmlFile: "mockData/embedTestFiles/index.html",
-        outputDir: "output",
+        scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
+        siteRoot: __dirname + "/mockData/embedTestFiles",
         mode: 'production'
       }, function (err) {
         assert(!err, err);
+        done();
+      });
+    });
+    it('works on the single page (development mode) without error', function (done) {
+      builder.runOnSite({
+        scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
+        siteRoot: __dirname + "/mockData/embedTestFiles",
+        mode: 'development'
+      }, function (err) {
+        assert(!err, err);
+        done();
+      });
+    });
+  });
+
+
+  describe('findCementHtmlFiles', function () {
+    it('finds files containing the cement include content in a specific folder', function (done) {
+      var expected = [
+        'child_folder/hasComment2.html',
+        'hasComment1.html'
+      ];
+      builder.findCementHtmlFiles(__dirname + '/mockdata/findCementHtmlFiles', function (err, files) {
+        assert(!err, err);
+        assert.equal(JSON.stringify(files), JSON.stringify(expected));
         done();
       });
     });
