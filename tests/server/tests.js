@@ -7,7 +7,7 @@
 var builder,
   fs = require('fs'),
   readFile = fs.readFile,
-  builder = require('../builder.js'),
+  builder = require('../../src/server/builder.js'),
   assert = require('assert');
 
 describe("builder", function () {
@@ -280,4 +280,75 @@ describe("builder", function () {
       });
     });
   });
+
+
+  describe("createScriptTag", function () {
+    it("converts a file path into a script tag", function (done) {
+      var filePath = 'js/cement/moduleName.js',
+        tag = builder.createScriptTag(filePath),
+        expectedTag = '<script type="text/javascript" src="' + filePath + '"></script>';
+      assert.equal(tag, expectedTag);
+      done();
+    });
+  });
+
+  describe("createMultipleScriptTags", function () {
+    it("creates multiple script tags", function (done) {
+      var inputScripts = [
+        'js/cement/moduleOne.js',
+        'js/cement/moduleTwo.js'
+      ],
+        expectedOutput = '';
+      expectedOutput += '<script type="text/javascript" src="js/cement/moduleOne.js"></script>';
+      expectedOutput += '<script type="text/javascript" src="js/cement/moduleTwo.js"></script>';
+      builder.createMultipleScriptTags(inputScripts, function (err, output) {
+        assert(!err, err);
+        assert.equal(output, expectedOutput);
+        done();
+      });
+    });
+  });
+
+  describe("addCementScripts", function (done) {
+    it("replaces the cement comment tag with embed script tags", function (done) {
+      var input = '',
+        output = '',
+        expectedOutput = '',
+        scriptPaths = [
+          'js/cement/moduleOne.js',
+          'js/cement/moduleTwo.js'
+        ];
+      input += '<html>';
+      input += '  <head>';
+      input += '<!-- Start:InsertCementJS -->';
+      input += 'does not matter what was here before';
+      input += '<!-- End:InsertCementJS -->';
+      input += '  </head>';
+      input += '  <body>';
+      input += '    <div id="container"></div>';
+      input += '  </body>';
+      input += '</html>';
+
+      expectedOutput += '<html>';
+      expectedOutput += '  <head>';
+      expectedOutput += '<!-- Start:InsertCementJS -->';
+      expectedOutput += '<script type="text/javascript" src="js/cement/moduleOne.js"></script>';
+      expectedOutput += '<script type="text/javascript" src="js/cement/moduleTwo.js"></script>';
+      expectedOutput += '<!-- End:InsertCementJS -->';
+      expectedOutput += '  </head>';
+      expectedOutput += '  <body>';
+      expectedOutput += '    <div id="container"></div>';
+      expectedOutput += '  </body>';
+      expectedOutput += '</html>';
+      builder.addCementScripts({
+        html: input,
+        scriptsFilePaths: scriptPaths
+      }, function (err, output) {
+        assert(!err, err);
+        assert.equal(output, expectedOutput);
+        done();
+      });
+    });
+  });
+
 });
