@@ -21,7 +21,7 @@ exports.createMultipleScriptTags = function (filePaths, callback) {
 };
 
 
-//replace the <!-- InsertCementJS --> with the script tags referencing the modules
+//replace the <!-- InsertCementModules --> with the script tags referencing the modules
 exports.addCementScripts = function (options, callback) {
   var cementComment = /<!-- Start:InsertCementModules -->(.|\n)*<!-- End:InsertCementModules -->/g;
   assert(options.html, 'html input must be specified');
