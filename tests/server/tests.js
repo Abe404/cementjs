@@ -207,21 +207,6 @@ describe("mixer", function () {
     });
   });
 
-  // Just test the build runs without errors and the compiled output is returned
-  describe("buildPageScripts", function () {
-    it("builds the scripts from a core.js file without throwing an error", function (done) {
-      var options = {
-        root: __dirname + "/mockData/dependencyTree",
-        path: "core.js"
-      };
-      mixer.buildPageScripts(options, function (err, compiledOutput) {
-        assert(!err, err);
-        assert(compiledOutput.length && typeof compiledOutput === "string", "build with no errors");
-        done();
-      });
-    });
-  });
-
 // Core files represtent the entry point or the "main" file for the scripts for a specific page.
   describe("getCoreFiles", function () {
     it("findes the core.js files in a multipage site", function (done) {
@@ -237,17 +222,7 @@ describe("mixer", function () {
       done();
     });
   });
-  describe("buildSiteScripts", function () {
-    it("builds all the pages in the site (each page should have a core.js)", function (done) {
-      var options = {
-        root: __dirname + "/mockData/multiPage"
-      };
-      mixer.buildSiteScripts(options, function (err) {
-        assert(!err, "assert site scripts built with no errors.");
-        done();
-      });
-    });
-  });
+
 
   describe('runOnSite', function () {
     it('works on the single page (production mode) without error', function (done) {
@@ -260,7 +235,7 @@ describe("mixer", function () {
         done();
       });
     });
-    it.only('works on the single page (development mode) without error', function (done) {
+    it.skip('works on the single page (development mode) without error', function (done) {
       mixer.runOnSite({
         scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
         siteRoot: __dirname + "/mockData/embedTestFiles",
@@ -312,6 +287,24 @@ describe("mixer", function () {
         assert.equal(output, expectedOutput);
         done();
       });
+    });
+  });
+
+
+  describe('getSiteDependencies', function () {
+    it('gets all the dependencies for a web site (cement js modules)', function (done) {
+      var expectedDependencies = [
+        "/companyB/specialWidget.js",
+        "/companyA/widgetTwo.js",
+        "/modal.js",
+        "/companyA/widgetOne.js"
+      ],
+        dependencies = mixer.getSiteDependencies({
+          siteRoot: __dirname + '/mockData/dependencyTree',
+          scriptsRoot: __dirname + '/mockData/dependencyTree'
+        });
+      assert.equal(JSON.stringify(dependencies), JSON.stringify(expectedDependencies));
+      done();
     });
   });
 

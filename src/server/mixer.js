@@ -56,6 +56,7 @@ exports.getRequiredModules = function (scriptContent) {
   }
   return requiredModules;
 };
+
 function moduleNameToFilePath(moduleName) {
   // companyA.widgetOne shoud be converted to companyA/widgetOne.js
   return moduleName.replace('.', '/') + ".js";
@@ -105,15 +106,12 @@ exports.validateModule = function (options, callback) {
     moduleName = null;
   if (!options.content) {
     throw new Error("script.content must be defined");
-    return;
   }
   if (!options.path) {
     throw new Error("script.path must be defined");
-    return;
   }
   if (!options.root) {
     throw new Error("script.root the root of the scripts must be defined");
-    return;
   }
   match = defineRegex.exec(options.content);
   if (match) {
@@ -122,17 +120,14 @@ exports.validateModule = function (options, callback) {
     // if there is another match then that means there is multiple definitions in the file
     if (match) {
       throw new Error("Multiple module definitions found in " + options.path);
-      return;
     }
   } else {
     throw new Error("Could not find a module defined in " + options.path);
-    return;
   }
   // remove the root from the beginning of the script.path
   options.path = options.path.replace(options.root + '/', "");
   if (!moduleNameMatchesPath(moduleName, options.path)) {
     throw new Error("Module name(" + moduleName + ") does not match its location(" + options.path + ")");
-    return;
   }
 };
 
@@ -158,49 +153,36 @@ exports.getCoreFiles = function (scriptsDirectory) {
   return corePaths;
 };
 
-exports.buildSiteScripts = function (options, callback) {
-  var coreFilePaths = null;
-  if (!options.root) {
-    throw new Error("Scripts root must be specified");
+exports.getSiteDependencies = function (options) {
+  if (!options.siteRoot) {
+    throw new Error("getSiteDependencies: siteRoot (dir) must be specified");
   }
-  coreFilePaths = exports.getCoreFiles(options.root);
-  function compileNext(path) {
-    if (path) {
-      exports.buildPageScripts({
-        root: options.root,
-        path: path.replace(options.root, '')
-      }, function (compiledOutput) {
-        fs.writeFileSync(path.replace('core.js', 'combined.js'), compiledOutput);
-        compileNext(coreFilePaths.shift());
-      });
-    } else {
-      callback();
+  if (!options.scriptsRoot) {
+    throw new Error("getSiteDependencies: scriptsRoot (dir) must be specified");
+  }
+  var coreFilePaths = exports.getCoreFiles(options.scriptsRoot),
+    i = 0,
+    j = 0,
+    tree = null,
+    moduleList = null,
+    fileList = null,
+    filePath = null,
+    allDependencies = []; // all dependencies for all core files
+
+  // for each of the core files
+  for (i = 0; i < coreFilePaths.length; i += 1) {
+    // get the dependency list in order.
+    tree = exports.getDependencyTree(options.scriptsRoot, String(coreFilePaths[i]).replace(options.scriptsRoot + '/', ''));
+    moduleList = exports.treeToModuleList(tree);
+    fileList = [];
+    for (j = 0; j < moduleList.length; j += 1) {
+      filePath = moduleNameToFilePath(moduleList[j]);
+      filePath = options.scriptsRoot.replace(options.siteRoot, '') + '/' + filePath;
+      fileList.push(filePath);
     }
+    allDependencies = allDependencies.concat(fileList);
   }
-  compileNext(coreFilePaths.shift());
-};
-
-exports.buildPageScripts = function (options, callback) {
-  if (!options.root) {
-    callback("buildPageScripts: scripts root must be specified");
-  }
-  if (!options.path) {
-    callback("buildPathScripts: script path must be specified");
-  }
-
-  var tree = exports.getDependencyTree(
-    options.root,
-    options.path
-  ),
-    moduleList = exports.treeToModuleList(tree),
-    fileList = [],
-    i = 0;
-  for (i = 0; i < moduleList.length; i += 1) {
-    fileList.push(options.root + '/' + moduleNameToFilePath(moduleList[i]));
-  }
-  exports.combineFiles(fileList, function (err, data) {
-    callback(err, data);
-  });
+  return allDependencies;
 };
 
 function replaceCementModuleEmbedCodeForPage(options, callback) {
@@ -258,7 +240,9 @@ exports.findCementHtmlFiles = function (siteRoot, callback) {
 };
 
 function runOnSiteForProduction(options, callback) {
-  var scriptPath = options.scriptsRoot + '/combinedCementModules.js';
+  var scriptPath = options.scriptsRoot + '/combinedCementModules.js',
+    i = 0,
+    allDependencies = [];
 
   function replaceAllCementEmbedCode(htmlFiles, callback) {
     var filesToReplace = htmlFiles;
@@ -299,13 +283,30 @@ function runOnSiteForProduction(options, callback) {
     fs.writeFileSync(scriptPath, combinedScripts); // write the final output file
     exports.findCementHtmlFiles(options.siteRoot, gotCementHtmlFiles);
   }
+  
+  allDependencies = exports.getSiteDependencies({
+    siteRoot: options.siteRoot,
+    scriptsRoot: options.scriptsRoot
+  });
 
-  exports.buildPageScripts({
-    root: options.scriptsRoot,
-    path: 'core.js'
-  }, gotCombinedScripts);
-
+  // add the site root
+  for (i = 0; i < allDependencies.length; i += 1) {
+    allDependencies[i] = options.siteRoot + allDependencies[i];
+  }
+  // get all the dependencies for the site and combine them into one file
+  exports.combineFiles(allDependencies, gotCombinedScripts);
 }
+
+//function runOnSiteForDevelopment(options, callback) {
+//  var scriptPaths = [];
+//  
+//  // get all the scripts for the site
+//  var tree = exports.getDependencyTree(
+//    options.scriptsRoot,
+//    options.siteRoot
+// 
+//
+//}
 
 exports.createScriptTag = function (filePath) {
   if (!filePath) {
