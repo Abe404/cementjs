@@ -10,10 +10,11 @@ exports.treeToModuleList = function treeToList(tree) {
   var i = 0,
     moduleList = [];
 
-  if (!tree.dependencies) {
-    throw new Error('tree must specify dependencies as an array, tree : ' + tree);
-  }
   for (i = 0; i < tree.length; i += 1) {
+    if (!tree[i].dependencies) {
+      throw new Error('tree must specify dependencies as an array, tree : ' + JSON.stringify(tree[i]));
+    }
+
     if (tree[i].dependencies.length) {
       moduleList = moduleList.concat(treeToList(tree[i].dependencies));
     }
@@ -59,7 +60,8 @@ function moduleNameToFilePath(moduleName) {
   // companyA.widgetOne shoud be converted to companyA/widgetOne.js
   return moduleName.replace('.', '/') + ".js";
 }
-exports.getDependencyTree = function getTree(scriptsRootDir, filePath, callback) {
+
+exports.getDependencyTree = function getTree(scriptsRootDir, filePath) {
   var tree = [],
     moduleContents = fs.readFileSync(scriptsRootDir + '/' + filePath).toString(),
     dependencyList = null,
@@ -71,34 +73,19 @@ exports.getDependencyTree = function getTree(scriptsRootDir, filePath, callback)
       content: moduleContents,
       path: scriptsRootDir + '/' + filePath,
       root: scriptsRootDir
-    }, function (err) {
-      if (err) {
-        callback(err);
-        return;
-      }
     });
   }
   dependencyList = exports.getRequiredModules(moduleContents);
-
+  nextDependency = dependencyList.shift();
   // add each one of the dependencies as a module
-  function getNext() {
-    nextDependency = dependencyList.shift();
-    if (!nextDependency) {
-      callback(null, tree);
-      return;
-    }
-    getTree(scriptsRootDir, moduleNameToFilePath(nextDependency), function (err, childTree) {
-      if (err) {
-        callback(err);
-        return;
-      }
-      tree.push({
-        name: nextDependency,
-        dependencies: childTree
-      });
+  while (nextDependency) {
+    tree.push({
+      name: nextDependency,
+      dependencies: getTree(scriptsRootDir, moduleNameToFilePath(nextDependency))
     });
+    nextDependency = dependencyList.shift();
   }
-  getNext();
+  return tree;
 };
 
 function moduleNameMatchesPath(moduleName, path) {
@@ -117,15 +104,15 @@ exports.validateModule = function (options, callback) {
     match = null,
     moduleName = null;
   if (!options.content) {
-    callback("script.content must be defined");
+    throw new Error("script.content must be defined");
     return;
   }
   if (!options.path) {
-    callback("script.path must be defined");
+    throw new Error("script.path must be defined");
     return;
   }
   if (!options.root) {
-    callback("script.root the root of the scripts must be defined");
+    throw new Error("script.root the root of the scripts must be defined");
     return;
   }
   match = defineRegex.exec(options.content);
@@ -134,20 +121,19 @@ exports.validateModule = function (options, callback) {
     match = defineRegex.exec(options.content);
     // if there is another match then that means there is multiple definitions in the file
     if (match) {
-      callback("Multiple module definitions found in " + options.path);
+      throw new Error("Multiple module definitions found in " + options.path);
       return;
     }
   } else {
-    callback("Could not find a module defined in " + options.path);
+    throw new Error("Could not find a module defined in " + options.path);
     return;
   }
   // remove the root from the beginning of the script.path
   options.path = options.path.replace(options.root + '/', "");
   if (!moduleNameMatchesPath(moduleName, options.path)) {
-    callback("Module name(" + moduleName + ") does not match its location(" + options.path + ")");
+    throw new Error("Module name(" + moduleName + ") does not match its location(" + options.path + ")");
     return;
   }
-  callback(null); // no error means valid module
 };
 
 // Find all the core files in the scriptsDirectory
@@ -201,20 +187,19 @@ exports.buildPageScripts = function (options, callback) {
   if (!options.path) {
     callback("buildPathScripts: script path must be specified");
   }
-  exports.getDependencyTree(options.root, options.path, function (err, tree) {
-    if (err) {
-      callback(err);
-      return;
-    }
-    var moduleList = exports.treeToModuleList(tree),
-      fileList = [],
-      i = 0;
-    for (i = 0; i < moduleList.length; i += 1) {
-      fileList.push(options.root + '/' + moduleNameToFilePath(moduleList[i]));
-    }
-    exports.combineFiles(fileList, function (err, data) {
-      callback(err, data);
-    });
+
+  var tree = exports.getDependencyTree(
+    options.root,
+    options.path
+  ),
+    moduleList = exports.treeToModuleList(tree),
+    fileList = [],
+    i = 0;
+  for (i = 0; i < moduleList.length; i += 1) {
+    fileList.push(options.root + '/' + moduleNameToFilePath(moduleList[i]));
+  }
+  exports.combineFiles(fileList, function (err, data) {
+    callback(err, data);
   });
 };
 
@@ -308,7 +293,6 @@ function runOnSiteForProduction(options, callback) {
 
   function gotCombinedScripts(err, combinedScripts) {
     if (err) {
-      console.log('error combining scritps');
       callback(err);
       return;
     }
@@ -374,6 +358,6 @@ exports.runOnSite = function (options, callback) {
   if (options.mode === 'production') {
     runOnSiteForProduction(options, callback);
   } else {
-    throw new Error('unhandled mode: ' + options.mode);
+    callback('unhandled mode: ' + options.mode);
   }
 };

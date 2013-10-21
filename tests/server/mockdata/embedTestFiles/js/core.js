@@ -3,8 +3,7 @@
 (function () {
   "use strict";
   var moduleOne = cement.require('moduleOne'),
-    moduleTwo = cement.require('moduleTwo');
-  alert('inside core');
+    moduleTwo = cement.require('child_module.moduleTwo');
   moduleOne.alert();
   moduleTwo.alert();
 }());

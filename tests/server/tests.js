@@ -4,13 +4,13 @@
 // the build script should resolve dependencies
 // and perform minification
 "use strict";
-var builder,
+var mixer,
   fs = require('fs'),
   readFile = fs.readFile,
-  builder = require('../../src/server/builder.js'),
+  mixer = require('../../src/server/mixer.js'),
   assert = require('assert');
 
-describe("builder", function () {
+describe("mixer", function () {
 
   describe("validateModule", function () {
     it("validates module: no error when name correct", function (done) {
@@ -18,14 +18,16 @@ describe("builder", function () {
       content += "cement.define('dashboard.mediaPanel', function (base, exports) {";
       content += "// this is the mediaPanel module";
       content += "});";
-      builder.validateModule({
-        root: "scripts",
-        path: "scripts/dashboard/mediaPanel.js",
-        content: content
-      }, function (err) {
+      try {
+        mixer.validateModule({
+          root: "scripts",
+          path: "scripts/dashboard/mediaPanel.js",
+          content: content
+        });
+      } catch (err) {
         assert(!err, "there should be no error, error found: " + err);
-        done();
-      });
+      }
+      done();
     });
 
     it("validates module: error when name incorrect", function (done) {
@@ -33,37 +35,40 @@ describe("builder", function () {
       content += "cement.define('dashboard.mediaPanel', function (base, exports) {";
       content += "// this is the mediaPanel module";
       content += "});";
-
-      builder.validateModule({
-        root: "scripts",
-        path: "scripts/dashboard/notMediaPanel.js",
-        content: content
-      }, function (err) {
+      try {
+        mixer.validateModule({
+          root: "scripts",
+          path: "scripts/dashboard/notMediaPanel.js",
+          content: content
+        });
+      } catch (err) {
         assert.equal(
-          err,
+          err.message,
           "Module name(dashboard.mediaPanel) does not match its location(dashboard/notMediaPanel.js)",
           "no error found, There should be an error due to the invalid module name."
         );
         done();
-      });
+      }
     });
 
     // error when there is no defined module found.
     it("error when no module found in file", function (done) {
       var content = "var foo = 42;",
         desiredErrorMessage = "Could not find a module defined in scripts/dashboard/mediaPanel.js";
-      builder.validateModule({
-        root: "scripts",
-        path: "scripts/dashboard/mediaPanel.js",
-        content: content
-      }, function (err) {
+      try {
+        mixer.validateModule({
+          root: "scripts",
+          path: "scripts/dashboard/mediaPanel.js",
+          content: content
+        });
+      } catch (err) {
         // "There should be an error when no module is found.
-        assert.equal(err, desiredErrorMessage, "should show multiple modules error");
+        assert.equal(err.message, desiredErrorMessage, "should show multiple modules error");
         done();
-      });
+      }
     });
 
-    // error when there are multiple modules defined (only one must be defined in a file)
+    // error when there are multiple modules defined (just one must be defined in a file)
     it("error when multiple modules defined in one file", function (done) {
       var desiredErrorMessage = "Multiple module definitions found in scripts/dashboard/mediaPanel.js",
         content = "cement.define('dashboard.mediaPanel', function (base, exports) {";
@@ -72,14 +77,16 @@ describe("builder", function () {
       content += "cement.define('dashboard.mediaPanelTwo', function (base, exports) {";
       content += "// this is the module";
       content += "});";
-      builder.validateModule({
-        root: "scripts",
-        path: "scripts/dashboard/mediaPanel.js",
-        content: content
-      }, function (err) {
-        assert.equal(err, desiredErrorMessage, "should show multiple modules error");
+      try {
+        mixer.validateModule({
+          root: "scripts",
+          path: "scripts/dashboard/mediaPanel.js",
+          content: content
+        });
+      } catch (err) {
+        assert.equal(err.message, desiredErrorMessage, "should show multiple modules error");
         done();
-      });
+      }
     });
   });
 
@@ -94,7 +101,7 @@ describe("builder", function () {
       content += "    collectionExplorer = cement.require('dashboard.collectionExplorer');";
       content += "  // this is the mediaPanel module";
       content += "});";
-      detectedRequiredModules = builder.getRequiredModules(content);
+      detectedRequiredModules = mixer.getRequiredModules(content);
       assert.equal(
         String(detectedRequiredModules),
         String(expectedRequiredModules),
@@ -128,9 +135,9 @@ describe("builder", function () {
       var fileNames = ['fileOne', 'fileTwo', 'fileThree'];
       // write three files to disk.
       writeTestFiles(function () {
-        // once written to disk tell the builder to combine the files.
-        builder.combineFiles(fileNames, function (combined) {
-          // check that the builder callback has all three files in it(in order)
+        // once written to disk tell the mixer to combine the files.
+        mixer.combineFiles(fileNames, function (err, combined) {
+          // check that the mixer callback has all three files in it(in order)
           assert(combined.indexOf("fileOneContents") !== -1, "fileOne is in the compiled output");
           assert(combined.indexOf("fileTwoContents") > combined.indexOf("fileOneContents"), "file two is after file one");
           assert(combined.indexOf("fileThreeContents") > combined.indexOf("fileTwoContents"), "file three is after file two");
@@ -161,16 +168,14 @@ describe("builder", function () {
           ]
       }],
         scriptRoot = __dirname + "/mockData/dependencyTree",
-        modulePath = "core.js";
-
-      builder.getDependencyTree(scriptRoot, modulePath, function (dependencyTree) {
-        assert.equal(
-          JSON.stringify(expectedTree),
-          JSON.stringify(dependencyTree),
-          "tree was not the same, tree = " + JSON.stringify(dependencyTree) + " expected = " + JSON.stringify(expectedTree)
-        );
-        done();
-      });
+        modulePath = "core.js",
+        dependencyTree = mixer.getDependencyTree(scriptRoot, modulePath);
+      assert.equal(
+        JSON.stringify(expectedTree),
+        JSON.stringify(dependencyTree),
+        "tree was not the same, tree = " + JSON.stringify(dependencyTree) + " expected = " + JSON.stringify(expectedTree)
+      );
+      done();
     });
   });
   describe("treeToModuleList", function () {
@@ -196,7 +201,7 @@ describe("builder", function () {
           "modal",
           "companyA.widgetOne"
         ],
-        list = builder.treeToModuleList(dependencyTree);
+        list = mixer.treeToModuleList(dependencyTree);
       assert.equal(JSON.stringify(expectedModuleList), JSON.stringify(list), "list is correct");
       done();
     });
@@ -209,7 +214,8 @@ describe("builder", function () {
         root: __dirname + "/mockData/dependencyTree",
         path: "core.js"
       };
-      builder.buildPageScripts(options, function (compiledOutput) {
+      mixer.buildPageScripts(options, function (err, compiledOutput) {
+        assert(!err, err);
         assert(compiledOutput.length && typeof compiledOutput === "string", "build with no errors");
         done();
       });
@@ -226,7 +232,7 @@ describe("builder", function () {
         ],
         corePaths = null;
 
-      corePaths = builder.getCoreFiles(pathToScripts);
+      corePaths = mixer.getCoreFiles(pathToScripts);
       assert.equal(JSON.stringify(corePaths), JSON.stringify(expectedPaths), "Core paths should be same as the ones found.");
       done();
     });
@@ -236,7 +242,7 @@ describe("builder", function () {
       var options = {
         root: __dirname + "/mockData/multiPage"
       };
-      builder.buildSiteScripts(options, function (err) {
+      mixer.buildSiteScripts(options, function (err) {
         assert(!err, "assert site scripts built with no errors.");
         done();
       });
@@ -244,8 +250,8 @@ describe("builder", function () {
   });
 
   describe('runOnSite', function () {
-    it.only('works on the single page (production mode) without error', function (done) {
-      builder.runOnSite({
+    it('works on the single page (production mode) without error', function (done) {
+      mixer.runOnSite({
         scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
         siteRoot: __dirname + "/mockData/embedTestFiles",
         mode: 'production'
@@ -254,8 +260,8 @@ describe("builder", function () {
         done();
       });
     });
-    it('works on the single page (development mode) without error', function (done) {
-      builder.runOnSite({
+    it.only('works on the single page (development mode) without error', function (done) {
+      mixer.runOnSite({
         scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
         siteRoot: __dirname + "/mockData/embedTestFiles",
         mode: 'development'
@@ -273,7 +279,7 @@ describe("builder", function () {
         'child_folder/hasComment2.html',
         'hasComment1.html'
       ];
-      builder.findCementHtmlFiles(__dirname + '/mockdata/findCementHtmlFiles', function (err, files) {
+      mixer.findCementHtmlFiles(__dirname + '/mockdata/findCementHtmlFiles', function (err, files) {
         assert(!err, err);
         assert.equal(JSON.stringify(files), JSON.stringify(expected));
         done();
@@ -285,7 +291,7 @@ describe("builder", function () {
   describe("createScriptTag", function () {
     it("converts a file path into a script tag", function (done) {
       var filePath = 'js/cement/moduleName.js',
-        tag = builder.createScriptTag(filePath),
+        tag = mixer.createScriptTag(filePath),
         expectedTag = '<script type="text/javascript" src="' + filePath + '"></script>';
       assert.equal(tag, expectedTag);
       done();
@@ -301,7 +307,7 @@ describe("builder", function () {
         expectedOutput = '';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleOne.js"></script>';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleTwo.js"></script>';
-      builder.createMultipleScriptTags(inputScripts, function (err, output) {
+      mixer.createMultipleScriptTags(inputScripts, function (err, output) {
         assert(!err, err);
         assert.equal(output, expectedOutput);
         done();
@@ -320,9 +326,9 @@ describe("builder", function () {
         ];
       input += '<html>';
       input += '  <head>';
-      input += '<!-- Start:InsertCementJS -->';
+      input += '<!-- Start:InsertCementModules -->';
       input += 'does not matter what was here before';
-      input += '<!-- End:InsertCementJS -->';
+      input += '<!-- End:InsertCementModules -->';
       input += '  </head>';
       input += '  <body>';
       input += '    <div id="container"></div>';
@@ -331,16 +337,16 @@ describe("builder", function () {
 
       expectedOutput += '<html>';
       expectedOutput += '  <head>';
-      expectedOutput += '<!-- Start:InsertCementJS -->';
+      expectedOutput += '<!-- Start:InsertCementModules -->';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleOne.js"></script>';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleTwo.js"></script>';
-      expectedOutput += '<!-- End:InsertCementJS -->';
+      expectedOutput += '<!-- End:InsertCementModules -->';
       expectedOutput += '  </head>';
       expectedOutput += '  <body>';
       expectedOutput += '    <div id="container"></div>';
       expectedOutput += '  </body>';
       expectedOutput += '</html>';
-      builder.addCementScripts({
+      mixer.addCementScripts({
         html: input,
         scriptsFilePaths: scriptPaths
       }, function (err, output) {
