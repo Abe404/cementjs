@@ -10,6 +10,10 @@ exports.treeToModuleList = function treeToList(tree) {
   // make sure the modules whileout any dependencies are included at the top.
   var i = 0,
     moduleList = [];
+
+  if (!tree.dependencies) {
+    throw new Error('tree must specify dependencies as an array, tree : ' + tree);
+  }
   for (i = 0; i < tree.length; i += 1) {
     if (tree[i].dependencies.length) {
       moduleList = moduleList.concat(treeToList(tree[i].dependencies));
@@ -76,20 +80,26 @@ exports.getDependencyTree = function getTree(scriptsRootDir, filePath, callback)
     });
   }
   dependencyList = exports.getRequiredModules(moduleContents);
-  nextDependency = dependencyList.shift();
+
   // add each one of the dependencies as a module
-  while (nextDependency) {
-    tree.push({
-      name: nextDependency,
-      dependencies: getTree(scriptsRootDir,  moduleNameToFilePath(nextDependency))
-    });
+  function getNext() {
     nextDependency = dependencyList.shift();
+    if (!nextDependency) {
+      callback(null, tree);
+      return;
+    }
+    getTree(scriptsRootDir, moduleNameToFilePath(nextDependency), function (err, childTree) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      tree.push({
+        name: nextDependency,
+        dependencies: childTree
+      });
+    });
   }
-  if (callback) {
-    callback(tree);
-  } else {
-    return tree;
-  }
+  getNext();
 };
 
 function moduleNameMatchesPath(moduleName, path) {
@@ -192,7 +202,11 @@ exports.buildPageScripts = function (options, callback) {
   if (!options.path) {
     callback("buildPathScripts: script path must be specified");
   }
-  exports.getDependencyTree(options.root, options.path, function (tree) {
+  exports.getDependencyTree(options.root, options.path, function (err, tree) {
+    if (err) {
+      callback(err);
+      return;
+    }
     var moduleList = exports.treeToModuleList(tree),
       fileList = [],
       i = 0;
@@ -307,7 +321,7 @@ function runOnSiteForProduction(options, callback) {
     root: options.scriptsRoot,
     path: 'core.js'
   }, gotCombinedScripts);
-  
+
 }
 
 exports.runOnSite = function (options, callback) {
