@@ -25,7 +25,8 @@ exports.combineFiles = function (filePaths, callback, prevData) {
   if (nextFile) {
     fs.readFile(nextFile, function (err, data) {
       if (err) {
-        throw new Error("Could not read dependency: " + nextFile);
+        callback("combineFiles: Could not read dependency: " + nextFile);
+        return;
       }
       if (combinedText.length) {
         combinedText += '\n'; // Add a line break between files.
@@ -34,7 +35,7 @@ exports.combineFiles = function (filePaths, callback, prevData) {
       exports.combineFiles(filePaths, callback, combinedText);
     });
   } else {
-    callback(combinedText);
+    callback(null, combinedText);
   }
 };
 
@@ -186,10 +187,10 @@ exports.buildSiteScripts = function (options, callback) {
 
 exports.buildPageScripts = function (options, callback) {
   if (!options.root) {
-    throw new Error("scripts root must be specified");
+    callback("buildPageScripts: scripts root must be specified");
   }
   if (!options.path) {
-    throw new Error("script path must be specified");
+    callback("buildPathScripts: script path must be specified");
   }
   exports.getDependencyTree(options.root, options.path, function (tree) {
     var moduleList = exports.treeToModuleList(tree),
@@ -198,43 +199,120 @@ exports.buildPageScripts = function (options, callback) {
     for (i = 0; i < moduleList.length; i += 1) {
       fileList.push(options.root + '/' + moduleNameToFilePath(moduleList[i]));
     }
-    fileList.push(options.root + '/' + options.path);
-    exports.combineFiles(fileList, function (data) {
-      callback(data);
+    exports.combineFiles(fileList, function (err, data) {
+      callback(err, data);
     });
   });
 };
 
+function replaceCementModuleEmbedCodeForPage(options, callback) {
+  // read the html file in
+  var originalHtml = String(fs.readFileSync(options.pathToHtmlFile));
+  // replace the cement comment with the combined script
+  embedder.addCementScripts({
+    scriptsFilePaths: options.scriptPaths,
+    html: originalHtml
+  }, function (err, htmlOutput) {
+    if (err) {
+      callback(err);
+      return;
+    }
+    // write the file out again 
+    fs.writeFileSync(options.pathToHtmlFile, htmlOutput);
+    callback(null);
+  });
+}
+
+
+exports.findCementHtmlFiles = function (siteRoot, callback) {
+  var cementHtmlFiles = [];
+
+  function fileContainsCementTag(filePath) {
+    var cementComment = /<!-- Start:InsertCementModules -->(.|\n)*<!-- End:InsertCementModules -->/g,
+      fileContents = String(fs.readFileSync(filePath));
+    return !!fileContents.match(cementComment);
+  }
+
+  function searchDir(dirPath) {
+    // get all the files in the directory.
+    var allFilesAndDirectories = fs.readdirSync(dirPath),
+      i = 0,
+      filePath;
+      // for each of the files
+    for (i = 0; i < allFilesAndDirectories.length; i += 1) {
+      filePath = dirPath + '/' + allFilesAndDirectories[i];
+      // if the file is a directory
+      if (fs.lstatSync(filePath).isDirectory()) {
+        // then search it for cement html files
+        searchDir(filePath);
+      } else {
+        // other wise if it is a file
+        // if it contains the cement tag
+        if (fileContainsCementTag(filePath)) {
+          // then add it to the list of cementHtmlFiles
+          cementHtmlFiles.push(filePath.replace(siteRoot + '/', ''));
+        }
+      }
+    }
+  }
+  searchDir(siteRoot);
+  callback(null, cementHtmlFiles);
+};
 
 function runOnSiteForProduction(options, callback) {
-  exports.buildPageScripts({
-    root: options.scriptsRoot,
-    path: 'core.js'
-  }, function (combinedScripts) {
-    var html = '',
-      scriptPath = options.outputDir + '/combined.js';
-    // write the final output file
-    fs.writeFileSync(scriptPath, combinedScripts);
-    // read the html file in
-    html = fs.readFileSync(options.pathToHtmlFile);
-    // replace the cement comment with the combined script
-    embedder.addCementScripts({
-      scriptsFilePaths: ['combined.js'],
-      html: String(html)
-    }, function (err, htmlOutput) {
+  var scriptPath = options.scriptsRoot + '/combinedCementModules.js';
+
+  function replaceAllCementEmbedCode(htmlFiles, callback) {
+    var filesToReplace = htmlFiles;
+
+    function doNext(err) {
+      var nextPath;
       if (err) {
         callback(err);
         return;
       }
-      // write the file out again 
-      fs.writeFileSync(options.outputDir + '/index.html', htmlOutput);
-      callback(null);
-    });
-  });
+      if (!filesToReplace.length) {
+        callback();
+        return;
+      }
+      nextPath = filesToReplace.pop();
+      replaceCementModuleEmbedCodeForPage({
+        siteRoot: options.siteRoot,
+        pathToHtmlFile: options.siteRoot + '/' + nextPath,
+        scriptPaths: [scriptPath.replace(options.siteRoot, '')]
+      }, doNext);
+    }
+    doNext();
+  }
+
+  function gotCementHtmlFiles(err, cementHtmlFiles) {
+    if (err) {
+      callback(err);
+      return;
+    }
+    replaceAllCementEmbedCode(cementHtmlFiles, callback);
+  }
+
+  function gotCombinedScripts(err, combinedScripts) {
+    if (err) {
+      console.log('error combining scritps');
+      callback(err);
+      return;
+    }
+    fs.writeFileSync(scriptPath, combinedScripts); // write the final output file
+    exports.findCementHtmlFiles(options.siteRoot, gotCementHtmlFiles);
+  }
+
+  exports.buildPageScripts({
+    root: options.scriptsRoot,
+    path: 'core.js'
+  }, gotCombinedScripts);
+  
 }
+
 exports.runOnSite = function (options, callback) {
   assert(options.scriptsRoot, 'folder containing the cement scripts for the page required');
-  assert(options.pathToHtmlFile, 'path to html file required');
+  assert(options.siteRoot, 'path to site root required');
   // production means scripts are combined and minified
   assert(
     options.mode === 'development' || options.mode === 'production',
@@ -243,6 +321,6 @@ exports.runOnSite = function (options, callback) {
   if (options.mode === 'production') {
     runOnSiteForProduction(options, callback);
   } else {
-    throw new Error('unhandled mode');
+    throw new Error('unhandled mode: ' + options.mode);
   }
 };
