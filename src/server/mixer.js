@@ -364,7 +364,7 @@ function runCementForHtmlFile(options, fileWithPath, callback) {
       replaceCementModuleEmbedCodeForPage({
         siteRoot: options.siteRoot,
         pathToHtmlFile: options.siteRoot + '/' + fileWithPath.path,
-        scriptPaths: [outputPath.replace(options.siteRoot, '')]
+        scriptPaths: [outputPath.replace(options.siteRoot + '/', '')]
       }, function (err) {
         if (err) {
           callback(err);
