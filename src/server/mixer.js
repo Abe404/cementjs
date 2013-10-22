@@ -62,9 +62,9 @@ function moduleNameToFilePath(moduleName) {
   return moduleName.replace('.', '/') + ".js";
 }
 
-exports.getDependencyTree = function getTree(scriptsRootDir, filePath) {
+exports.getDependencyTree = function getTree(jsRootDir, filePath) {
   var tree = [],
-    moduleContents = fs.readFileSync(scriptsRootDir + '/' + filePath).toString(),
+    moduleContents = fs.readFileSync(jsRootDir + '/' + filePath).toString(),
     dependencyList = null,
     nextDependency = null;
   // Check that the module is valid before doing anything else (fail early defensive programming)
@@ -72,8 +72,8 @@ exports.getDependencyTree = function getTree(scriptsRootDir, filePath) {
   if (filePath.slice(filePath.length - "core.js".length, filePath.length) !== "core.js") {
     exports.validateModule({
       content: moduleContents,
-      path: scriptsRootDir + '/' + filePath,
-      root: scriptsRootDir
+      path: jsRootDir + '/' + filePath,
+      root: jsRootDir
     });
   }
   dependencyList = exports.getRequiredModules(moduleContents);
@@ -82,7 +82,7 @@ exports.getDependencyTree = function getTree(scriptsRootDir, filePath) {
   while (nextDependency) {
     tree.push({
       name: nextDependency,
-      dependencies: getTree(scriptsRootDir, moduleNameToFilePath(nextDependency))
+      dependencies: getTree(jsRootDir, moduleNameToFilePath(nextDependency))
     });
     nextDependency = dependencyList.shift();
   }
@@ -153,38 +153,6 @@ exports.getCoreFiles = function (scriptsDirectory) {
   return corePaths;
 };
 
-exports.getSiteDependencies = function (options) {
-  if (!options.siteRoot) {
-    throw new Error("getSiteDependencies: siteRoot (dir) must be specified");
-  }
-  if (!options.scriptsRoot) {
-    throw new Error("getSiteDependencies: scriptsRoot (dir) must be specified");
-  }
-  var coreFilePaths = exports.getCoreFiles(options.scriptsRoot),
-    i = 0,
-    j = 0,
-    tree = null,
-    moduleList = null,
-    fileList = null,
-    filePath = null,
-    allDependencies = []; // all dependencies for all core files
-
-  // for each of the core files
-  for (i = 0; i < coreFilePaths.length; i += 1) {
-    // get the dependency list in order.
-    tree = exports.getDependencyTree(options.scriptsRoot, String(coreFilePaths[i]).replace(options.scriptsRoot + '/', ''));
-    moduleList = exports.treeToModuleList(tree);
-    fileList = [];
-    for (j = 0; j < moduleList.length; j += 1) {
-      filePath = moduleNameToFilePath(moduleList[j]);
-      filePath = options.scriptsRoot.replace(options.siteRoot, '') + '/' + filePath;
-      fileList.push(filePath);
-    }
-    allDependencies = allDependencies.concat(fileList);
-  }
-  return allDependencies;
-};
-
 function replaceCementModuleEmbedCodeForPage(options, callback) {
   // read the html file in
   var originalHtml = String(fs.readFileSync(options.pathToHtmlFile));
@@ -203,44 +171,39 @@ function replaceCementModuleEmbedCodeForPage(options, callback) {
   });
 }
 
-exports.getCementForAttribute = function (cementComment, callback) {
+exports.getCementForAttributeFromComment = function (cementComment, callback) {
   var regex = /<!-- Start:InsertCementModules for=["'](.*?)['"] -->(.|\n)*<!-- End:InsertCementModules -->/g;
-  callback(null, regex.exec(cementComment)[1]);
+  return regex.exec(cementComment)[1];
 };
 
-exports.getCementComment = function (htmlFilePath, callback) {
-  var cementCommentPattern = /<!-- Start:InsertCementModules for=\"(.|\n)*\" -->(.|\n)*<!-- End:InsertCementModules -->/g;
-  // load the file.
-  fs.readFile(htmlFilePath, function (err, fileData) {
-    var comment;
-    if (err) {
-      callback(err);
-      return;
-    }
-    fileData = String(fileData);
-    comment = fileData.match(cementCommentPattern)[0];
-    // use a regular expression to extract the comment
-    callback(null, comment);
-  });
+exports.getCementCommentFromFile = function (htmlFilePath) {
+  var cementCommentPattern = /<!-- Start:InsertCementModules for=["'](.|\n)*['"] -->(.|\n)*<!-- End:InsertCementModules -->/g,
+    fileData = fs.readFileSync(htmlFilePath);
+  fileData = String(fileData);
+  // use a regular expression to extract the comment
+  return fileData.match(cementCommentPattern)[0];
 };
 
+
+exports.getCementForAttributeFromFile = function (htmlFilePath) {
+  var comment = exports.getCementCommentFromFile(htmlFilePath);
+  return exports.getCementForAttributeFromComment(comment);
+};
+
+// return files as objects with two properties
+// { path: , insertCementModulesFor: }
 exports.findCementHtmlFiles = function (siteRoot, callback) {
   var cementHtmlFiles = [];
-
-  function fileContainsCementTag(filePath) {
-    var cementComment = /<!-- Start:InsertCementModules -->(.|\n)*<!-- End:InsertCementModules -->/g,
-      fileContents = String(fs.readFileSync(filePath));
-    return !!fileContents.match(cementComment);
-  }
 
   function searchDir(dirPath) {
     // get all the files in the directory.
     var allFilesAndDirectories = fs.readdirSync(dirPath),
-      i = 0,
-      filePath;
-      // for each of the files
-    for (i = 0; i < allFilesAndDirectories.length; i += 1) {
-      filePath = dirPath + '/' + allFilesAndDirectories[i];
+      filePath,
+      forAttr;
+
+    // for each of the files
+    while (allFilesAndDirectories.length) {
+      filePath = dirPath + '/' + allFilesAndDirectories.shift();
       // if the file is a directory
       if (fs.lstatSync(filePath).isDirectory()) {
         // then search it for cement html files
@@ -248,9 +211,15 @@ exports.findCementHtmlFiles = function (siteRoot, callback) {
       } else {
         // other wise if it is a file
         // if it contains the cement tag
-        if (fileContainsCementTag(filePath)) {
-          // then add it to the list of cementHtmlFiles
-          cementHtmlFiles.push(filePath.replace(siteRoot + '/', ''));
+        // get the cement comment for attr
+        try {
+          forAttr = exports.getCementForAttributeFromFile(filePath);
+            // then add it to the list of cementHtmlFiles
+          cementHtmlFiles.push({
+            path: filePath.replace(siteRoot + '/', ''),
+            insertCementModulesFor: forAttr
+          });
+        } catch (e) {
         }
       }
     }
@@ -258,65 +227,6 @@ exports.findCementHtmlFiles = function (siteRoot, callback) {
   searchDir(siteRoot);
   callback(null, cementHtmlFiles);
 };
-
-function runOnSiteForProduction(options, callback) {
-  var scriptPath = options.scriptsRoot + '/combinedCementModules.js',
-    i = 0,
-    allDependencies = [];
-
-  function replaceAllCementEmbedCode(htmlFiles, callback) {
-    var filesToReplace = htmlFiles;
-
-    function doNext(err) {
-      var nextPath;
-      if (err) {
-        callback(err);
-        return;
-      }
-      if (!filesToReplace.length) {
-        callback();
-        return;
-      }
-      nextPath = filesToReplace.pop();
-      replaceCementModuleEmbedCodeForPage({
-        siteRoot: options.siteRoot,
-        pathToHtmlFile: options.siteRoot + '/' + nextPath,
-        scriptPaths: [scriptPath.replace(options.siteRoot, '')]
-      }, doNext);
-    }
-    doNext();
-  }
-
-  function gotCementHtmlFiles(err, cementHtmlFiles) {
-    if (err) {
-      callback(err);
-      return;
-    }
-    replaceAllCementEmbedCode(cementHtmlFiles, callback);
-  }
-
-  function gotCombinedScripts(err, combinedScripts) {
-    if (err) {
-      callback(err);
-      return;
-    }
-    fs.writeFileSync(scriptPath, combinedScripts); // write the final output file
-    exports.findCementHtmlFiles(options.siteRoot, gotCementHtmlFiles);
-  }
-  
-  allDependencies = exports.getSiteDependencies({
-    siteRoot: options.siteRoot,
-    scriptsRoot: options.scriptsRoot
-  });
-
-  // add the site root
-  for (i = 0; i < allDependencies.length; i += 1) {
-    allDependencies[i] = options.siteRoot + allDependencies[i];
-  }
-  // get all the dependencies for the site and combine them into one file
-  exports.combineFiles(allDependencies, gotCombinedScripts);
-}
-
 
 exports.createScriptTag = function (filePath) {
   if (!filePath) {
@@ -337,21 +247,22 @@ exports.createMultipleScriptTags = function (filePaths, callback) {
 
 //replace the <!-- InsertCementModules --> with the script tags referencing the modules
 exports.addCementScripts = function (options, callback) {
-  var cementComment = /<!-- Start:InsertCementModules -->(.|\n)*<!-- End:InsertCementModules -->/g;
+  var cementCommentRegex = /<!-- Start:InsertCementModules for=["'](.*?)['"] -->(.|\n)*<!-- End:InsertCementModules -->/g,
+    forAttr = '';
   assert(options.html, 'html input must be specified');
   assert(options.scriptsFilePaths, 'scriptsFilePaths must be specified');
-
-  if (!options.html.match(cementComment)) {
+  if (!options.html.match(cementCommentRegex)) {
     callback('could not find cement block in the input file: ' + options.html);
   }
+  forAttr = cementCommentRegex.exec(options.html)[1];
   function gotScriptsHtml(err, scriptsHtml) {
     var output = '';
     if (err) {
       callback(err);
       return;
     }
-    scriptsHtml = '<!-- Start:InsertCementModules -->' + scriptsHtml + '<!-- End:InsertCementModules -->';
-    output = options.html.replace(cementComment, scriptsHtml);
+    scriptsHtml = '<!-- Start:InsertCementModules for="' + forAttr + '" -->' + scriptsHtml + '<!-- End:InsertCementModules -->';
+    output = options.html.replace(cementCommentRegex, scriptsHtml);
     callback(null, output);
   }
   exports.createMultipleScriptTags(options.scriptsFilePaths, gotScriptsHtml);
@@ -372,9 +283,106 @@ function getCombinedOutputFilePath(jsRoot, dependencyPath) {
 }
 
 
+// options = { siteRoot: , jsRoot, path: (either dir or core.js file) }
+exports.getDependencies = function (options) {
+  if (!options.siteRoot) {
+    throw new Error("getDependencies: siteRoot (dir) must be specified");
+  }
+  if (!options.jsRoot) {
+    throw new Error("getDependencies: jsRoot (dir) must be specified");
+  }
+  if (!options.path) {
+    throw new Error("getDependencies: path (dir or core.js file) must be specified");
+  }
+  var coreFilePaths = [],
+    i = 0,
+    j = 0,
+    tree = null,
+    moduleList = null,
+    fileList = null,
+    filePath = null,
+    allDependencies = []; // all dependencies for all core files
+
+  if (fs.lstatSync(options.siteRoot + options.path).isDirectory()) {
+    coreFilePaths = exports.getCoreFiles(options.siteRoot + options.path);
+  } else {
+    coreFilePaths = [options.siteRoot + options.path];
+  }
+  // for each of the core files
+  for (i = 0; i < coreFilePaths.length; i += 1) {
+    // get the dependency list in order.
+    tree = exports.getDependencyTree(options.jsRoot, String(coreFilePaths[i]).replace(options.jsRoot, ''));
+    moduleList = exports.treeToModuleList(tree);
+    fileList = [];
+    for (j = 0; j < moduleList.length; j += 1) {
+      filePath = moduleNameToFilePath(moduleList[j]);
+      filePath = options.jsRoot.replace(options.siteRoot, '') + '/' + filePath;
+      fileList.push(filePath);
+    }
+    allDependencies = allDependencies.concat(fileList);
+  }
+  return allDependencies;
+};
+
+
+function getCombinedFileOutputPath(dependenciesFor) {
+  var outputPath;
+  // if dependencyPath resolves to a directory then
+  if (fs.lstatSync(dependenciesFor).isDirectory()) {
+    outputPath = dependenciesFor + '/combinedCementModules.js';
+  } else {
+    // if it is a file
+    outputPath = dependenciesFor + '.combinedCementModules.js';
+  }
+  return outputPath;
+}
+
+function runCementForHtmlFile(options, fileWithPath, callback) {
+  // get the depency list based on the files dependencies 'for' attr
+  var i = 0,
+    dependencyList = exports.getDependencies({
+      siteRoot: options.siteRoot,
+      jsRoot: options.jsRoot,
+      path: fileWithPath.insertCementModulesFor
+    });
+
+  // If mode is production
+  if (options.mode === 'production') {
+    for (i = 0; i < dependencyList.length; i += 1) {
+      dependencyList[i] = options.siteRoot + dependencyList[i];
+    }
+    // Then combine all the files in the dependency list into one file
+    exports.combineFiles(dependencyList, function (err, combinedScripts) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      var outputPath = getCombinedFileOutputPath(options.siteRoot + '/' + fileWithPath.insertCementModulesFor);
+      // save this file to an output path
+      fs.writeFileSync(outputPath, combinedScripts); // write the final output file
+      // Then insert an embed link to the outputted file in the html file
+      replaceCementModuleEmbedCodeForPage({
+        siteRoot: options.siteRoot,
+        pathToHtmlFile: options.siteRoot + '/' + fileWithPath.path,
+        scriptPaths: [outputPath.replace(options.siteRoot, '')]
+      }, function (err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        callback();
+      });
+    });
+  } else if (options.mode === 'development') {
+    throw new Error('cant do it deveopment yet');
+    //   if mode is development
+    //     insert embed code for each one of the item in the full dependecy list
+    //     these directly reference the original files in the jsRoot folder.
+  }
+}
 
 exports.runOnSite = function (options, callback) {
-  assert(options.scriptsRoot, 'folder containing the cement scripts for the page required');
+  assert(options.jsRoot, 'folder containing the cement scripts for the page required');
   assert(options.siteRoot, 'path to site root required');
   // production means scripts are combined and minified
   assert(
@@ -382,29 +390,29 @@ exports.runOnSite = function (options, callback) {
     'mode should be specified as either development or production'
   );
 
+  function gotCementHtmlFiles(err, filesWithDependencyPaths) {
+    if (err) {
+      callback(err);
+    }
+    console.log('site root = ', options.siteRoot);
+    console.log('filesWith deps = ', filesWithDependencyPaths);
 
-  function gotCementHtmlFiles(err, filesWithDependencyPath) {
     // Then for each file 
-    //   get the full dependency list based on dependencyPath <- TODO write this function
-    //
-    //   If mode is production
-    //     Then combine all the files in the dependency list into one file
-    //     save this file to an output path
-    //     if dependencyPath resolves to a directory then
-    //       output path is dependencyPath + '/combinedCementModules.js'
-    //     else if it is a file then 
-    //       output path is dependencyPath + '.combinedCementModules.js' 
-    //     Then insert an embed link to the outputted file in the html file
-
-    //   if mode is development
-    //     insert embed code for each one of the item in the full dependecy list
-    //     these directly reference the original files in the jsRoot folder.
-
-
-
-
+    function runCementForNextFile() {
+      if (!filesWithDependencyPaths.length) {
+        callback();
+        return;
+      }
+      runCementForHtmlFile(options, filesWithDependencyPaths.pop(), function (err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        runCementForNextFile();
+      });
+    }
+    runCementForNextFile();
   }
-
   // First find all the html files in the site root 
   // with the cement modules include comment
   // Whilst getting this list of files also parse their dependency path
@@ -412,12 +420,4 @@ exports.runOnSite = function (options, callback) {
   // it is specified in the comment for="{dependencyPath"
   // (either a core.js file or a directory containing one or more core.js files)
   exports.findCementHtmlFiles(options.siteRoot, gotCementHtmlFiles);
-  
-
-
-  if (options.mode === 'production') {
-    runOnSiteForProduction(options, callback);
-  } else {
-    callback('unhandled mode: ' + options.mode);
-  }
 };

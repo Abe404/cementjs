@@ -212,8 +212,8 @@ describe("mixer", function () {
     it("findes the core.js files in a multipage site", function (done) {
       var pathToScripts = __dirname + "/mockData/multiPage",
         expectedPaths = [
-          __dirname + '/mockData/multiPage/page1/core.js',
-          __dirname + '/mockData/multiPage/page2/core.js'
+          __dirname + '/mockData/multiPage/js/page1/core.js',
+          __dirname + '/mockData/multiPage/js/page2/core.js'
         ],
         corePaths = null;
 
@@ -225,20 +225,20 @@ describe("mixer", function () {
 
 
   describe('runOnSite', function () {
-    it('works on the single page (production mode) without error', function (done) {
+    it('runs in production mode without error', function (done) {
       mixer.runOnSite({
-        scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
-        siteRoot: __dirname + "/mockData/embedTestFiles",
+        jsRoot:  __dirname + "/mockData/multiPage/js",
+        siteRoot: __dirname + "/mockData/multiPage",
         mode: 'production'
       }, function (err) {
         assert(!err, err);
         done();
       });
     });
-    it.skip('works on the single page (development mode) without error', function (done) {
+    it.skip('runs in development mode without error', function (done) {
       mixer.runOnSite({
-        scriptsRoot:  __dirname + "/mockData/embedTestFiles/js",
-        siteRoot: __dirname + "/mockData/embedTestFiles",
+        jsRoot:  __dirname + "/mockData/multiPage/js",
+        siteRoot: __dirname + "/mockData/multiPage",
         mode: 'development'
       }, function (err) {
         assert(!err, err);
@@ -251,8 +251,8 @@ describe("mixer", function () {
   describe('findCementHtmlFiles', function () {
     it('finds files containing the cement include content in a specific folder', function (done) {
       var expected = [
-        'child_folder/hasComment2.html',
-        'hasComment1.html'
+        { path: 'child_folder/hasComment2.html', insertCementModulesFor: '/js' },
+        { path: 'hasComment1.html', insertCementModulesFor: '/js/pageOne/core.js' }
       ];
       mixer.findCementHtmlFiles(__dirname + '/mockdata/findCementHtmlFiles', function (err, files) {
         assert(!err, err);
@@ -287,24 +287,6 @@ describe("mixer", function () {
         assert.equal(output, expectedOutput);
         done();
       });
-    });
-  });
-
-
-  describe('getSiteDependencies', function () {
-    it('gets all the dependencies for a web site (cement js modules)', function (done) {
-      var expectedDependencies = [
-        "/companyB/specialWidget.js",
-        "/companyA/widgetTwo.js",
-        "/modal.js",
-        "/companyA/widgetOne.js"
-      ],
-        dependencies = mixer.getSiteDependencies({
-          siteRoot: __dirname + '/mockData/dependencyTree',
-          scriptsRoot: __dirname + '/mockData/dependencyTree'
-        });
-      assert.equal(JSON.stringify(dependencies), JSON.stringify(expectedDependencies));
-      done();
     });
   });
 
@@ -352,32 +334,69 @@ describe("mixer", function () {
   describe('getCementCommentFromFile', function () {
     it('can extract the cement comment from an html file', function (done) {
       var exampleHtmlFilePath = __dirname + '/mockData/multiPage/html/page1.html',
+        comment = '',
         expected = '<!-- Start:InsertCementModules for="/js/page1/core.js" -->\n';
       expected += '  <!-- End:InsertCementModules -->';
-      mixer.getCementComment(exampleHtmlFilePath, function (err, comment) {
-        assert(!err, err);
-        console.log('actual=  ', comment);
-        console.log('expected=  ', expected);
-        assert.equal(comment, expected);
-        done();
-      });
+      comment = mixer.getCementCommentFromFile(exampleHtmlFilePath);
+      assert.equal(comment, expected);
+      done();
     });
   });
 
-  describe('getCementForAttribute', function () {
-    it.only('can get the value of the for attribute from a cement comment', function (done) {
+  describe('getCementForAttributeFromComment', function () {
+    it('can get the value of the for attribute from a cement comment', function (done) {
       var input = '',
+        attr = '',
         expected = '/js/page1/core.js';
       input += '<!-- Start:InsertCementModules for="/js/page1/core.js" -->';
       input += '<!-- End:InsertCementModules -->';
-      mixer.getCementForAttribute(input, function (err, attr) {
-        assert(!err, err);
-        assert.equal(attr, expected);
-        done();
-      });
+      attr = mixer.getCementForAttributeFromComment(input);
+      assert.equal(attr, expected);
+      done();
     });
-
   });
 
 
+  describe('getDependencies', function () {
+    it('gets dependencies based on a core.js file', function (done) {
+      var input = {
+        siteRoot: __dirname + '/mockData/multiPage',
+        jsRoot: __dirname + '/mockData/multiPage/js',
+        path: '/js/page1/core.js'
+      },
+        expectedOutput = [
+          "/js/companyB/specialWidget.js",
+          "/js/companyA/widgetTwo.js",
+          "/js/modal.js",
+          "/js/companyA/widgetOne.js"
+        ],
+        dependencyList = mixer.getDependencies(input);
+      assert.equal(
+        JSON.stringify(dependencyList),
+        JSON.stringify(expectedOutput)
+      );
+      done();
+    });
+
+    it('gets dependencies based on a directory (should get all dependencies of all core files in the directory)', function (done) {
+      var input = {
+        siteRoot: __dirname + '/mockData/multiPage',
+        jsRoot: __dirname + '/mockData/multiPage/js',
+        path: '/js'
+      },
+        expectedOutput = [
+          "/js/companyB/specialWidget.js",
+          "/js/companyA/widgetTwo.js",
+          "/js/modal.js",
+          "/js/companyA/widgetOne.js",
+          "/js/page2/uniqueWidget.js"
+        ],
+        dependencyList = mixer.getDependencies(input);
+      assert.equal(
+        JSON.stringify(dependencyList),
+        JSON.stringify(expectedOutput)
+      );
+      done();
+    });
+  });
 });
