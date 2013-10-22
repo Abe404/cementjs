@@ -311,7 +311,6 @@ describe("mixer", function () {
   describe("addCementScripts", function (done) {
     it("replaces the cement comment tag with embed script tags", function (done) {
       var input = '',
-        output = '',
         expectedOutput = '',
         scriptPaths = [
           'js/cement/moduleOne.js',
@@ -349,5 +348,36 @@ describe("mixer", function () {
       });
     });
   });
+  
+  describe('getCementCommentFromFile', function () {
+    it('can extract the cement comment from an html file', function (done) {
+      var exampleHtmlFilePath = __dirname + '/mockData/multiPage/html/page1.html',
+        expected = '<!-- Start:InsertCementModules for="/js/page1/core.js" -->\n';
+      expected += '  <!-- End:InsertCementModules -->';
+      mixer.getCementComment(exampleHtmlFilePath, function (err, comment) {
+        assert(!err, err);
+        console.log('actual=  ', comment);
+        console.log('expected=  ', expected);
+        assert.equal(comment, expected);
+        done();
+      });
+    });
+  });
+
+  describe('getCementForAttribute', function () {
+    it.only('can get the value of the for attribute from a cement comment', function (done) {
+      var input = '',
+        expected = '/js/page1/core.js';
+      input += '<!-- Start:InsertCementModules for="/js/page1/core.js" -->';
+      input += '<!-- End:InsertCementModules -->';
+      mixer.getCementForAttribute(input, function (err, attr) {
+        assert(!err, err);
+        assert.equal(attr, expected);
+        done();
+      });
+    });
+
+  });
+
 
 });
