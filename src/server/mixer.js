@@ -344,7 +344,23 @@ function runCementForHtmlFile(options, fileWithPath, callback) {
       siteRoot: options.siteRoot,
       jsRoot: options.jsRoot,
       path: fileWithPath.insertCementModulesFor
+    }),
+    jsPaths = [];
+
+
+  function replaceCementComment() {
+    replaceCementModuleEmbedCodeForPage({
+      siteRoot: options.siteRoot,
+      pathToHtmlFile: options.siteRoot + '/' + fileWithPath.path,
+      scriptPaths: jsPaths
+    }, function (err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback();
     });
+  }
 
   // If mode is production
   if (options.mode === 'production') {
@@ -361,24 +377,16 @@ function runCementForHtmlFile(options, fileWithPath, callback) {
       // save this file to an output path
       fs.writeFileSync(outputPath, combinedScripts); // write the final output file
       // Then insert an embed link to the outputted file in the html file
-      replaceCementModuleEmbedCodeForPage({
-        siteRoot: options.siteRoot,
-        pathToHtmlFile: options.siteRoot + '/' + fileWithPath.path,
-        scriptPaths: [outputPath.replace(options.siteRoot + '/', '')]
-      }, function (err) {
-        if (err) {
-          callback(err);
-          return;
-        }
-        callback();
-      });
+      jsPaths = [outputPath.replace(options.siteRoot + '/', '')];
+      replaceCementComment();
     });
   } else if (options.mode === 'development') {
-    throw new Error('cant do it deveopment yet');
-    //   if mode is development
-    //     insert embed code for each one of the item in the full dependecy list
-    //     these directly reference the original files in the jsRoot folder.
+    // if its development mode then insert embed code for each one of the item in the full dependency list
+    // these directly reference the original files in the jsRoot folder.
+    jsPaths = dependencyList;
+    replaceCementComment();
   }
+
 }
 
 exports.runOnSite = function (options, callback) {
@@ -394,9 +402,6 @@ exports.runOnSite = function (options, callback) {
     if (err) {
       callback(err);
     }
-    console.log('site root = ', options.siteRoot);
-    console.log('filesWith deps = ', filesWithDependencyPaths);
-
     // Then for each file 
     function runCementForNextFile() {
       if (!filesWithDependencyPaths.length) {

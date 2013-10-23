@@ -224,28 +224,6 @@ describe("mixer", function () {
   });
 
 
-  describe.only('runOnSite', function () {
-    it('runs in production mode without error', function (done) {
-      mixer.runOnSite({
-        jsRoot:  __dirname + "/mockData/multiPage/js",
-        siteRoot: __dirname + "/mockData/multiPage",
-        mode: 'production'
-      }, function (err) {
-        assert(!err, err);
-        done();
-      });
-    });
-    it.skip('runs in development mode without error', function (done) {
-      mixer.runOnSite({
-        jsRoot:  __dirname + "/mockData/multiPage/js",
-        siteRoot: __dirname + "/mockData/multiPage",
-        mode: 'development'
-      }, function (err) {
-        assert(!err, err);
-        done();
-      });
-    });
-  });
 
 
   describe('findCementHtmlFiles', function () {
@@ -300,7 +278,7 @@ describe("mixer", function () {
         ];
       input += '<html>';
       input += '  <head>';
-      input += '<!-- Start:InsertCementModules -->';
+      input += '<!-- Start:InsertCementModules for="/js/cement" -->';
       input += 'does not matter what was here before';
       input += '<!-- End:InsertCementModules -->';
       input += '  </head>';
@@ -311,7 +289,7 @@ describe("mixer", function () {
 
       expectedOutput += '<html>';
       expectedOutput += '  <head>';
-      expectedOutput += '<!-- Start:InsertCementModules -->';
+      expectedOutput += '<!-- Start:InsertCementModules for="/js/cement" -->';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleOne.js"></script>';
       expectedOutput += '<script type="text/javascript" src="js/cement/moduleTwo.js"></script>';
       expectedOutput += '<!-- End:InsertCementModules -->';
@@ -330,15 +308,14 @@ describe("mixer", function () {
       });
     });
   });
-  
+
   describe('getCementCommentFromFile', function () {
     it('can extract the cement comment from an html file', function (done) {
       var exampleHtmlFilePath = __dirname + '/mockData/multiPage/html/page1.html',
         comment = '',
-        expected = '<!-- Start:InsertCementModules for="/js/page1/core.js" -->\n';
-      expected += '  <!-- End:InsertCementModules -->';
+        expected = /<!-- Start:InsertCementModules for=["'](.|\n)*['"] -->(.|\n)*<!-- End:InsertCementModules -->/g;
       comment = mixer.getCementCommentFromFile(exampleHtmlFilePath);
-      assert.equal(comment, expected);
+      assert(comment.match(expected));
       done();
     });
   });
@@ -399,4 +376,28 @@ describe("mixer", function () {
       done();
     });
   });
+
+  describe('runOnSite', function () {
+    it('runs in production mode without error', function (done) {
+      mixer.runOnSite({
+        jsRoot:  __dirname + "/mockData/multiPage/js",
+        siteRoot: __dirname + "/mockData/multiPage",
+        mode: 'production'
+      }, function (err) {
+        assert(!err, err);
+        done();
+      });
+    });
+    it('runs in development mode without error', function (done) {
+      mixer.runOnSite({
+        jsRoot:  __dirname + "/mockData/multiPage/js",
+        siteRoot: __dirname + "/mockData/multiPage",
+        mode: 'development'
+      }, function (err) {
+        assert(!err, err);
+        done();
+      });
+    });
+  });
+
 });
