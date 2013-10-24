@@ -1,0 +1,34 @@
+{
+  "name": "cement-mixer",
+  "description": "Combine client side cement modules for webpages",
+  "keywords": [
+    "cementjs",
+    "cement",
+    "mixer",
+    "cement-mixer",
+    "cement_mixer",
+    "cementmixer",
+    "modules",
+    "client"
+  ],
+  "version": "0.0.1",
+  "author": {
+    "name": "Abraham Smith",
+    "email": "abe@abesmith.co.uk"
+  },
+  "contributors": [
+    {
+      "name": "Abraham Smith",
+      "email": "abe@abesmith.co.uk"
+    }
+  ],
+  "bin": {
+    "cement-mixer": "./bin/cement-mixer.js"
+  },
+  "dependencies": {
+    "optimist": "~0.6.0"
+  },
+  "engines": {
+    "node": ">=0.4.12"
+  }
+}

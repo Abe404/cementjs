@@ -1,0 +1,64 @@
+
+In Fig 01 illustrates the JavaScript files used in webAppA.
+All the JavaScript files for this application reside in a folder called JavaScript.
+Inside this are two folders. webAppA and widgetCo.
+webAppA contains all the implementation specific code for the application.
+The widgetCo folder includes some modules which are used (required) by webAppA.
+The JavaScript modules in the widgetCo folder are re-usable modules developed by widgetCo.
+
+## Fig: 01.
+-----------
+JavaScript -> webAppA ->  dashboard -> core.js
+                          dashboard -> someWidget.js
+           -> widgetCo -> datePicker -> datePicker.js
+                       -> timeUtills.js
+
+-----------
+
+
+During development the unminified scripts must be included in the html page.
+It is necessary to change the html embed code every time a script is added, renamed or removed.
+
+Cement can be used to generate the embed code that can be inserted into a html page
+Invoke cement with the embed command and a path to the scripts and cement will output
+the embed code with the scripts in the correct order.
+
+----------
+$ cement embed root ./JavaScript  target ./JavaScript/webAppA/dashboard/core.js
+Outputs:
+<script type="text/javascript" src="/JavaScript/widgetCo/timeUtills.js"></script>
+<script type="text/javascript" src="/JavaScript/widgetCo/datePicker/datePicker.js"></script>
+<script type="text/javascript" src="/JavaScript/webAppA/someWidget.js"></script>
+<script type="text/javascript" src="/JavaScript/webAppA/core.js"></script>
+----------
+
+A prepend option can be specified if the JavaScript folder does not reside at the web root
+
+----------
+$ cement embed prepend "/Content" ./JavaScript 
+Outputs:
+<script type="text/javascript" src="/Content/JavaScript/widgetCo/timeUtills.js"></script>
+<script type="text/javascript" src="/Content/JavaScript/widgetCo/datePicker/datePicker.js"></script>
+<script type="text/javascript" src="/Content/JavaScript/webAppA/someWidget.js"></script>
+<script type="text/javascript" src="/Content/JavaScript/webAppA/core.js"></script>
+----------
+
+### Production ###
+Embedding many JavaScript files can be detrimental to page load time.
+It can be useful to combine all the files and then to minify them.
+Cement can be used to combine the JavaScript files.
+The combined files will contain the modules in the correct order as cement detects module dependencies.
+Modules that are not in the core and are not required by any modules in the core will not be included in the compiled output.
+
+To compile the JavaScript used in webAppA into a single file called combined.js
+
+$ cement build root ./JavaScript path ./JavaScript/webappA/dashboard/core.js > ./JavaScript/webappA/dashboard/combined.js
+
+
+<script type="text/javascript" src="/Content/JavaScript/webappA/dashboard/combined.js"></script>
+
+//
+Lint files
+Combine files
+Minify files
+
