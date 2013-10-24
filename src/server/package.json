@@ -11,22 +11,23 @@
     "modules",
     "client"
   ],
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": {
     "name": "Abraham Smith",
-    "email": "abe@abesmith.co.uk"
+    "email": "abegsmith@gmail.com."
   },
   "contributors": [
     {
       "name": "Abraham Smith",
-      "email": "abe@abesmith.co.uk"
+      "email": "abegsmith@gmail.com"
     }
   ],
   "bin": {
     "cement-mixer": "./bin/cement-mixer.js"
   },
   "dependencies": {
-    "optimist": "~0.6.0"
+    "optimist": "~0.6.0",
+    "jsmin": "~1.0.1"
   },
   "engines": {
     "node": ">=0.4.12"

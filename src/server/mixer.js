@@ -1,7 +1,8 @@
 /*jslint node:true, regexp:true, indent:2, stupid: true*/
 "use strict";
 var fs = require('fs'),
-  assert = require('assert');
+  assert = require('assert'),
+  jsmin = require('jsmin').jsmin;
 // This is a builder module designed to be ran with nodejs
 // The build script will handle dependency resolution and minification.
 
@@ -325,15 +326,19 @@ exports.getDependencies = function (options) {
 };
 
 
-function getCombinedFileOutputPath(dependenciesFor) {
+function getCombinedFileOutputPath(dependenciesFor, minify) {
   var outputPath;
   // if dependencyPath resolves to a directory then
   if (fs.lstatSync(dependenciesFor).isDirectory()) {
-    outputPath = dependenciesFor + '/combinedCementModules.js';
+    outputPath = dependenciesFor + '/combinedCementModules';
   } else {
     // if it is a file
-    outputPath = dependenciesFor + '.combinedCementModules.js';
+    outputPath = dependenciesFor + '.combinedCementModules';
   }
+  if (minify) {
+    outputPath += '.min';
+  }
+  outputPath += '.js';
   return outputPath;
 }
 
@@ -346,7 +351,6 @@ function runCementForHtmlFile(options, fileWithPath, callback) {
       path: fileWithPath.insertCementModulesFor
     }),
     jsPaths = [];
-
 
   function replaceCementComment() {
     replaceCementModuleEmbedCodeForPage({
@@ -373,7 +377,10 @@ function runCementForHtmlFile(options, fileWithPath, callback) {
         callback(err);
         return;
       }
-      var outputPath = getCombinedFileOutputPath(options.siteRoot + '/' + fileWithPath.insertCementModulesFor);
+      var outputPath = getCombinedFileOutputPath(options.siteRoot + '/' + fileWithPath.insertCementModulesFor, options.minify);
+      if (options.minify) {
+        combinedScripts = jsmin(combinedScripts);
+      }
       // save this file to an output path
       fs.writeFileSync(outputPath, combinedScripts); // write the final output file
       // Then insert an embed link to the outputted file in the html file
@@ -386,12 +393,12 @@ function runCementForHtmlFile(options, fileWithPath, callback) {
     jsPaths = dependencyList;
     replaceCementComment();
   }
-
 }
 
 exports.runOnSite = function (options, callback) {
   assert(options.jsRoot, 'folder containing the cement scripts for the page required');
   assert(options.siteRoot, 'path to site root required');
+  assert(options.minify === true || options.minify == false, 'minify should be specified as true or false');
   // production means scripts are combined and minified
   assert(
     options.mode === 'development' || options.mode === 'production',

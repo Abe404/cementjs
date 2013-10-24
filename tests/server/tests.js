@@ -378,10 +378,11 @@ describe("mixer", function () {
   });
 
   describe('runOnSite', function () {
-    it('runs in production mode without error', function (done) {
+    it.only('runs in production mode without error', function (done) {
       mixer.runOnSite({
         jsRoot:  __dirname + "/mockData/multiPage/js",
         siteRoot: __dirname + "/mockData/multiPage",
+        minify: true,
         mode: 'production'
       }, function (err) {
         assert(!err, err);
@@ -392,6 +393,7 @@ describe("mixer", function () {
       mixer.runOnSite({
         jsRoot:  __dirname + "/mockData/multiPage/js",
         siteRoot: __dirname + "/mockData/multiPage",
+        minify: true,
         mode: 'development'
       }, function (err) {
         assert(!err, err);
