@@ -378,7 +378,7 @@ describe("mixer", function () {
   });
 
   describe('runOnSite', function () {
-    it.only('runs in production mode without error', function (done) {
+    it('runs in production mode without error', function (done) {
       mixer.runOnSite({
         jsRoot:  __dirname + "/mockData/multiPage/js",
         siteRoot: __dirname + "/mockData/multiPage",
