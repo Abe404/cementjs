@@ -11,10 +11,10 @@
     "modules",
     "client"
   ],
-  "version": "0.0.2",
+  "version": "0.0.1",
   "author": {
     "name": "Abraham Smith",
-    "email": "abegsmith@gmail.com."
+    "email": "abegsmith@gmail.com"
   },
   "contributors": [
     {
@@ -28,6 +28,10 @@
   "dependencies": {
     "optimist": "~0.6.0",
     "jsmin": "~1.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abe404/cementjs.git"
   },
   "engines": {
     "node": ">=0.4.12"

@@ -3,5 +3,6 @@
 cement.define("companyA.widgetOne", function (base, exports) {
   "use strict";
   var widgetTwo = cement.require("companyA.widgetTwo"),
-    modal = cement.require("modal");
+    modal = cement.require("modal"),
+    widgetTwoB = cement.require("companyB.specialWidget");
 });
