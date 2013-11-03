@@ -283,6 +283,18 @@ function getCombinedOutputFilePath(jsRoot, dependencyPath) {
   return outputPath;
 }
 
+exports.removeDuplicateDependencies = function (dependencyList) {
+  var uniqueDependencies = [],
+    i = 0;
+  for (i = 0; i < dependencyList.length; i += 1) {
+    // if it is not in the list
+    if (uniqueDependencies.indexOf(dependencyList[i]) === -1) {
+      uniqueDependencies.push(dependencyList[i]);
+    }
+  }
+  return uniqueDependencies;
+};
+
 
 // options = { siteRoot: , jsRoot, path: (either dir or core.js file) }
 exports.getDependencies = function (options) {
@@ -322,6 +334,7 @@ exports.getDependencies = function (options) {
     }
     allDependencies = allDependencies.concat(fileList);
   }
+  allDependencies = exports.removeDuplicateDependencies(allDependencies);
   return allDependencies;
 };
 

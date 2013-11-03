@@ -63,7 +63,7 @@ describe("mixer", function () {
         });
       } catch (err) {
         // "There should be an error when no module is found.
-        assert.equal(err.message, desiredErrorMessage, "should show multiple modules error");
+        assert.equal(err.message, desiredErrorMessage, "should show no module defined error");
         done();
       }
     });
@@ -334,6 +334,33 @@ describe("mixer", function () {
   });
 
 
+  describe('removeDuplicateDependencies', function () {
+    it('removes dependencies that have already been defined', function (done) {
+      var input = [
+        "/js/companyB/specialWidget.js",
+        "/js/companyA/widgetTwo.js",
+        "/js/modal.js",
+        "/js/companyB/specialWidget.js",
+        "/js/companyA/widgetOne.js",
+        "/js/page2/uniqueWidget.js"
+      ],
+        expectedOutput = [
+          "/js/companyB/specialWidget.js",
+          "/js/companyA/widgetTwo.js",
+          "/js/modal.js",
+          "/js/companyA/widgetOne.js",
+          "/js/page2/uniqueWidget.js"
+        ],
+        output = mixer.removeDuplicateDependencies(input);
+      console.log('output = ', output);
+      assert.equal(
+        JSON.stringify(output),
+        JSON.stringify(expectedOutput)
+      );
+      done();
+    });
+  });
+
   describe('getDependencies', function () {
     it('gets dependencies based on a core.js file', function (done) {
       var input = {
@@ -354,7 +381,7 @@ describe("mixer", function () {
       );
       done();
     });
-
+    // this also tests that getDependencies removes multiple dependencies
     it('gets dependencies based on a directory (should get all dependencies of all core files in the directory)', function (done) {
       var input = {
         siteRoot: __dirname + '/mockData/multiPage',
@@ -382,7 +409,7 @@ describe("mixer", function () {
       mixer.runOnSite({
         jsRoot:  __dirname + "/mockData/multiPage/js",
         siteRoot: __dirname + "/mockData/multiPage",
-        minify: true,
+        minify: false,
         mode: 'production'
       }, function (err) {
         assert(!err, err);

@@ -2,6 +2,6 @@
 /*globals $, cement*/
 (function () {
   "use strict";
-  var widget = cement.require("companyA.widgetOne");
+  var widget1 = cement.require("companyA.widgetOne"),
   // This is the core
 }());
